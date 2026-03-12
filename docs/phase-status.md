@@ -1,20 +1,29 @@
 # Phase status
 
-## Current phase: Toolchain baseline (Step 2) — In progress
+## Current step
 
-Foundation (Step 1) established repo layout, docs, and Cursor rules. Step 2 locks the Python toolchain and local quality gates only; no product code, CI, or Docker.
+Step 5 — Foundation normalization
 
-### Exit criteria for Step 2
+## Goal
 
-- [ ] `pyproject.toml` defines Python 3.12, dev group (ruff, mypy, pytest), and tool config.
-- [ ] `.python-version` pins 3.12.
-- [ ] `.env.example` exists and is minimal (no product secrets or speculative vars).
-- [ ] `docs/toolchain-baseline.md` documents baseline and local commands.
-- [ ] `tests/unit/test_repo_foundation.py` passes and asserts repo structure and key files.
-- [ ] `.gitignore` ignores `.venv` and common Python caches; does not ignore `uv.lock`.
-- [ ] `uv sync --group dev` succeeds; `ruff check`, `ruff format --check`, `mypy`, and `pytest -q` run without errors on the current tree.
-- [ ] Human review and approval of Step 2 changes.
+Close foundation gaps and make the repository documentation, governance files, ignore rules, ansmoke tests match the actual working mode and current baseline.
 
-### Completed
+## Exit criteria
 
-- Foundation setup (Step 1): README, .gitignore, .editorconfig, execution charter, architecture overview, decision log, phase status, Cursor rules.
+- [ ] `.editorconfig` exists
+- [ ] `docs/execution-charter.md` exists
+- [ ] `docs/architecture-overview.md` exists
+- [ ] `README.md` reflects the current ChatGPT-first workflow
+- [ ] `docs/toolchain-baseline.md` reflects the actual local commands
+- [ ] `.gitignore` ignores Ruff and mypy caches
+- [ ] `tests/unit/test_repo_foundation.py` enforces the restored foundation files
+- [ ] `make check` passes
+- [ ] Human review is complete
+- [ ] Commit is created
+
+## Completed
+
+- Step 1 — Repository shell
+- Step 2 — Python toolchain baseline
+- Step 3 — Local developer command surface
+- Step 4 — Repository state capture

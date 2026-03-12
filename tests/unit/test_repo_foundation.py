@@ -1,43 +1,42 @@
 from pathlib import Path
 
 
-def _repo_root() -> Path:
+def repo_root() -> Path:
     return Path(__file__).resolve().parent.parent.parent
 
 
-def _path_exists(root: Path, relative: str) -> bool:
-    return (root / relative).exists()
+def relative_path_exists(relative_path: str) -> bool:
+    return (repo_root() / relative_path).exists()
 
 
-def test_repo_has_pyproject_toml() -> None:
-    root = _repo_root()
-    assert _path_exists(root, "pyproject.toml")
+def test_foundation_files_exist() -> None:
+    required_files = [
+        ".editorconfig",
+        ".env.example",
+        ".gitignore",
+        ".python-version",
+        "Makefile",
+        "README.md",
+        "docs/architecture-overview.md",
+        "docs/decision-log.md",
+        "docs/execution-charter.md",
+        "docs/phase-status.md",
+        "docs/toolchain-baseline.md",
+        "pyproject.toml",
+    ]
+    for relative_path in required_files:
+        assert relative_path_exists(relative_path), f"Missing required file: {relative_path}"
 
 
-def test_repo_has_python_version_pin() -> None:
-    root = _repo_root()
-    assert _path_exists(root, ".python-version")
-
-
-def test_repo_has_env_example() -> None:
-    root = _repo_root()
-    assert _path_exists(root, ".env.example")
-
-
-def test_repo_has_docs_and_toolchain_baseline() -> None:
-    root = _repo_root()
-    assert (root / "docs").is_dir()
-    assert _path_exists(root, "docs/toolchain-baseline.md")
-
-
-def test_repo_has_tests_structure() -> None:
-    root = _repo_root()
-    assert (root / "tests").is_dir()
-    assert (root / "tests" / "unit").is_dir()
-
-
-def test_repo_has_key_foundation_files() -> None:
-    root = _repo_root()
-    required = ["README.md", ".gitignore", "pyproject.toml"]
-    for name in required:
-        assert _path_exists(root, name), f"Missing required file: {name}"
+def test_foundation_directories_exist() -> None:
+    required_directories = [
+        "apps",
+        "docs",
+        "infra",
+        "packages",
+        "services",
+        "tests",
+        "tests/unit",
+    ]
+    for relative_path in required_directories:
+        assert (repo_root() / relative_path).is_dir(), f"Missing required directory: {relative_path}"

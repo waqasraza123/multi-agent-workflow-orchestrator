@@ -1,41 +1,34 @@
 # Multi-Agent Platform
 
-Production-grade multi-agent research and execution platform. Monorepo; foundation and toolchain only—no product implementation yet.
+Production-grade multi-agent research and execution platform.
 
-**Status:** Foundation only. Toolchain baseline in progress.
+**Status:** Foundation only. Repository governance and Python toolchain baseline are in place. No product implementation has started yet.
 
 ## Repository structure
 
 - `apps/` — User-facing applications
-- `services/` — Backend services
-- `packages/` — Shared libraries and utilities
-- `tests/` — Unit and integration tests
-- `infra/` — Deployment and infrastructure
-- `docs/` — Design, decisions, and runbooks
+- `services/` — Long-running backendvices and workers
+- `packages/` — Shared libraries and domain modules
+- `tests/` — Unit, integration, and evaluation tests
+- `infra/` — Deployment and environment assets
+- `docs/` — Specifications, decisions, and runbooks
 
 ## Working mode
 
-- **ChatGPT** — Spec and design review.
-- **Cursor** — Repo changes and implementation.
-
-Runtime and toolchain choices are intentionally deferred until the foundation step is complete.
+- **ChatGPT** — Primary execution partner for planning, code, tests, debugging, and review
+- **Cursor** — Repo inspection only when current file state or diffs are needed
 
 ## Local setup
 
-1. Install [uv](https://docs.astral.sh/uv/).
-2. From repo root:
+- Bootstrap: `uv sync --group dev`
+- Quality gate: `make check`
+- Format with fixes: `make format`
 
-   ```bash
-   uv sync --group dev
-   ```
+## Current foundation scope
 
-3. Run quality gates:
+- Root Python toolchain baseline
+- Repository governance documents
+- Local developer command surface
+- Repository smoke tests
 
-   ```bash
-   uv run ruff check .
-   uv run ruff format --check .
-   uv run mypy apps services packages tests
-   uv run pytest -q
-   ```
-
-See `docs/toolchain-baseline.md` for the full toolchain baseline.
+See `docs/toolchain-baseline.md`, `docs/execution-charter.md`, and `docs/architecture-overview.md` for the current foundation source of truth.
