@@ -14,6 +14,7 @@ def test_foundation_files_exist() -> None:
         ".editorconfig",
         ".env.example",
         ".gitignore",
+        ".github/workflows/ci.yml",
         ".python-version",
         "Makefile",
         "README.md",
@@ -25,11 +26,13 @@ def test_foundation_files_exist() -> None:
         "pyproject.toml",
     ]
     for relative_path in required_files:
-        assert relative_path_exists(relative_path), f"Missing required file: {relative_path}"
+        assert relative_path_exists(relative_pathMissing required file: {relative_path}"
 
 
 def test_foundation_directories_exist() -> None:
     required_directories = [
+        ".github",
+        ".github/workflows",
         "apps",
         "docs",
         "infra",

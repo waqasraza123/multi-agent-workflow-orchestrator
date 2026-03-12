@@ -9,7 +9,7 @@
 
 ## Toolchain baseline
 
-- Pyly
+- Python 3.12 only
 - uv for environment and dependency management
 - Ruff for linting and formatting
 - mypy for static type checking
@@ -24,7 +24,16 @@
 
 ## Foundation normalization
 
-This step restores the missing repository governance files, adds `.editorconfig`, aligns documentation with the current workflow, strengthens the smoke test, and updates ignore rules for mypy and Ruff caches.
+This step restored the missing repository governance files, added `.editorconfig`, aligned documentation with the current workflow, strengthened the smoke test, and updated ignore rules for mypy and Ruff caches.
+
+## CI foundation
+
+- GitHub Actions is the repository CI baseline
+- `actions/setup-python@v6` uses `.python-version`
+- `astral-sh/setup-uv@v7` installs uv and enables cache support
+- CI uses `uv sync --locked --group dev`
+- CI runs `make check`
+- CI triggers on pushes to `main`, pull requests, and manual dispatch
 
 ## Still intentionally undecided
 
@@ -33,4 +42,4 @@ This step restores the missing repository governance files, adds `.editorconfig`
 - Database technology
 - Queueing and background execution strategy
 - Deployment model
-- CI provider and workflow design
+- Release workflow design
