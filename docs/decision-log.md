@@ -2,7 +2,8 @@
 
 ## Initial assumptions
 
-- Monorepo layout with `apps/`, `services/`, `packages/`, `tests/`, `infra/`, step at a time
+- Monorepo layout with `apps/`, `services/`, `packages/`, `tests/`, `infra/`, and `docs/`
+- One step at a time
 - Smallest safe change set
 - Human review before commit
 
@@ -32,13 +33,12 @@
 - FastAPI for the initial HTTP application surface
 - Uvicorn for local ASGI serving
 
-## Application boundary decision
+## Mutation workflow decision
 
-- HTTP routes do not manipulate orchestration state directly
-- A service layer owns run creation and retrieval
-- A repository abstraction sits behind the service layer
-- Persistence starts with an in-memory implementation only
-- Database integration is deferred until the API contract is stable
+- Run mutations are exposed as explicit command endpoints
+- Application services own task registration, task start, task completion, and evidence recording
+- Repository update is used after deterministic state transitions
+- API does not call orchestration functions directly
 
 ## Still intentionally undecided
 

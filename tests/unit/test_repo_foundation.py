@@ -25,13 +25,20 @@ def test_foundation_files_exist() -> None:
         "docs/toolchain-baseline.md",
         "pyproject.toml",
         "src/multi_agent_platform/api/app.py",
+        "src/multi_agent_platform/api/routes/runs.py",
+        "src/multi_agent_platform/application/run_views.py",
         "src/multi_agent_platform/application/runs.py",
+        "src/multi_agent_platform/contracts/run_commands.py",
+        "src/multi_agent_platform/contracts/run_queries.py",
+        "src/multi_agent_platform/contracts/run_views.py",
         "src/multi_agent_platform/contracts/runs.py",
         "src/multi_agent_platform/orchestration/state.py",
         "src/multi_agent_platform/storage/run_repository.py",
     ]
     for relative_path in required_files:
-        assert relative_path_exists(relative_path), f"Missing required file: {relative_path}"
+        assert relative_path_exists(relative_path), (
+            f"Missing required file: {relative_path}"
+        )
 
 
 def test_foundation_directories_exist() -> None:

@@ -1,87 +1,134 @@
-from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, ConfigDict
+from fastapi import APIRouter, Depends, HTTPException, Query, status as http_status
 
 from multi_agent_platform.api.dependencies import get_run_service
-from multi_agent_platform.application.runs import RunService
-from multi_agent_platform.contracts.runs import (
-    RunCreateRequest,
-    RunStateSnapshot,
-    RunStatus,
-    WorkflowType,
+from multi_agent_platform.application.runs import RunService, StateTransitionError
+from multi_agent_platform.contracts.run_commands import (
+    EvidenceCreateRequest,
+    TaskCompleteRequest,
+    TaskRegistrationRequest,
+    TaskStartRequest,
 )
+from multi_agent_platform.contracts.run_queries import RunListQuery
+from multi_agent_platform.contracts.run_views import RunListResponse, RunResponse, RunStateResponse
+from multi_agent_platform.contracts.runs import RunCreateRequest, RunStatus, WorkflowType
 from multi_agent_platform.storage.run_repository import RunNotFoundError
 
 router = APIRouter(prefix="/runs", tags=["runs"])
 RunServiceDependency = Annotated[RunService, Depends(get_run_service)]
+LimitQuery = Annotated[int, Query(ge=1, le=100)]
+OffsetQuery = Annotated[int, Query(ge=0)]
+StatusQuery = Annotated[RunStatus | None, Query()]
+WorkflowTypeQuery = Annotated[WorkflowType | None, Query()]
 
 
-class RunSummary(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    run_id: str
-    workflow_type: WorkflowType
-    status: RunStatus
-    user_goal: str
-    created_at: datetime
-    updated_at: datetime
-    current_task_id: str | None
-
-
-class RunListResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    items: list[RunSummary]
-
-
-def build_run_summary(run_state: RunStateSnapshot) -> RunSummary:
-    return RunSummary(
-        run_id=run_state.run_id,
-        workflow_type=run_state.workflow_type,
-        status=run_state.status,
-        user_goal=run_state.user_goal,
-        created_at=run_state.created_at,
-        updated_at=run_state.updated_at,
-        current_task_id=run_state.current_task_id,
+def build_run_list_query(
+    limit: LimitQuery = 20,
+    offset: OffsetQuery = 0,
+    status_filter: StatusQuery = None,
+    workflow_type_filter: WorkflowTypeQuery = None,
+) -> RunListQuery:
+    return RunListQuery(
+        limit=limit,
+        offset=offset,
+        status=status_filter,
+        workflow_type=workflow_type_filter,
     )
 
 
-@router.post("", response_model=RunStateSnapshot, status_code=status.HTTP_201_CREATED)
+RunListQueryDependency = Annotated[RunListQuery, Depends(build_run_list_query)]
+
+
+def map_run_error(error: Exception) -> HTTPException:
+    if isinstance(error, RunNotFoundError):
+        return HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(error))
+    if isinstance(error, StateTransitionError):
+        return HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail=str(error))
+    raise HTTPException(status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected run error")
+
+
+@router.post("", response_model=RunResponse, status_code=http_status.HTTP_201_CREATED)
 def create_run(
     request: RunCreateRequest,
     run_service: RunServiceDependency,
-) -> RunStateSnapshot:
+) -> RunResponse:
     return run_service.create_run(request)
 
 
 @router.get("", response_model=RunListResponse)
 def list_runs(
+    query: RunListQueryDependency,
     run_service: RunServiceDependency,
 ) -> RunListResponse:
-    return RunListResponse(
-        items=[build_run_summary(run_state) for run_state in run_service.list_runs()]
-    )
+    return run_service.list_runs(query)
 
 
-@router.get("/{run_id}", response_model=RunStateSnapshot)
+@router.get("/{run_id}", response_model=RunResponse)
 def get_run(
     run_id: str,
     run_service: RunServiceDependency,
-) -> RunStateSnapshot:
+) -> RunResponse:
     try:
         return run_service.get_run(run_id)
-    except RunNotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    except Exception as error:
+        raise map_run_error(error) from error
 
 
-@router.get("/{run_id}/state", response_model=RunStateSnapshot)
+@router.get("/{run_id}/state", response_model=RunStateResponse)
 def get_run_state(
     run_id: str,
     run_service: RunServiceDependency,
-) -> RunStateSnapshot:
+) -> RunStateResponse:
     try:
         return run_service.get_run_state(run_id)
-    except RunNotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
+@router.post("/{run_id}/tasks", response_model=RunStateResponse)
+def register_run_tasks(
+    run_id: str,
+    request: TaskRegistrationRequest,
+    run_service: RunServiceDependency,
+) -> RunStateResponse:
+    try:
+        return run_service.register_tasks(run_id, request)
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
+@router.post("/{run_id}/tasks/{task_id}/start", response_model=RunStateResponse)
+def start_run_task(
+    run_id: str,
+    task_id: str,
+    run_service: RunServiceDependency,
+) -> RunStateResponse:
+    try:
+        return run_service.start_task(run_id, TaskStartRequest(task_id=task_id))
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
+@router.post("/{run_id}/tasks/{task_id}/complete", response_model=RunStateResponse)
+def complete_run_task(
+    run_id: str,
+    task_id: str,
+    run_service: RunServiceDependency,
+) -> RunStateResponse:
+    try:
+        return run_service.complete_task(run_id, TaskCompleteRequest(task_id=task_id))
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
+@router.post("/{run_id}/evidence", response_model=RunStateResponse)
+def create_run_evidence(
+    run_id: str,
+    request: EvidenceCreateRequest,
+    run_service: RunServiceDependency,
+) -> RunStateResponse:
+    try:
+        return run_service.record_evidence(run_id, request)
+    except Exception as error:
+        raise map_run_error(error) from error

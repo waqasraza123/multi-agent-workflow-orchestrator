@@ -2,33 +2,21 @@
 
 ## Current step
 
-Step 8 — API scaffold with service and repository boundaries
+Step 10 - Run mutation commands and execution progress endpoints
 
 ## Goal
 
-Introduce the first runnable backend surface with FastAPI, application services, repository abstractions, and in-memory persistence for run creation and retrieval.
+Add mutation commands and endpoints so runs can register tasks, progress task execution, and record evidence through the service and repository boundaries.
 
 ## Exit criteria
 
-- [ ] FastAPI app exists
-- [ ] health endpoint exists
-- [ ] create-run endpoint exists
-- [ ] list-runs endpoint exists
-- [ ] get-run endpoint exists
-- [ ] get-run-state endpoint exists
-- [ ] service layer exists
-- [ ] repository abstraction and in-memory repository exist
-- [ ] API, service, and repository tests pass
+- [ ] task registration command exists
+- [ ] task lifecycle command models exist
+- [ ] evidence recording command exists
+- [ ] repository update path is used by mutation services
+- [ ] service layer supports task registration, start, complete, and evidence recording
+- [ ] API exposes mutation endpoints
+- [ ] API, service, and orchestration tests cover mutation flow
 - [ ] `make check` passes
-- [ ] hum review is complete
+- [ ] human review is complete
 - [ ] commit is created
-
-## Completed
-
-- Step 1 — Repository shell
-- Step 2 — Python toolchain baseline
-- Step 3 — Local developer command surface
-- Step 4 — Repository state capture
-- Step 5 — Foundation normalization
-- Step 6 — CI foundation
-- Step 7 — Core contracts and orchestration state scaffold

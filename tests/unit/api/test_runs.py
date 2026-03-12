@@ -10,43 +10,134 @@ def reset_state() -> None:
     reset_api_state()
 
 
-def test_create_and_get_run_endpoints_return_created_run() -> None:
+def test_create_and_get_run_endpoints_return_wrapped_run_detail() -> None:
     client = TestClient(app)
 
     create_response = client.post(
         "/runs",
-        json={"user_goal": "Investigate the failed deployment"},
+        json={
+            "user_goal": "Investigate the failed deployment",
+            "workflow_type": "document_analysis",
+        },
     )
 
     assert create_response.status_code == 201
-    created_payload = create_response.json()
+    created_payload = create_response.json()["item"]
+    run_id = created_payload["run_id"]
+
     assert created_payload["status"] == "planning"
-    assert created_payload["workflow_type"] == "technical_plan"
+    assert created_payload["workflow_type"] == "document_analysis"
+    assert created_payload["task_count"] == 0
+    assert created_payload["evidence_count"] == 0
 
-    get_response = client.get(f"/runs/{created_payload['run_id']}")
+    get_response = client.get(f"/runs/{run_id}")
+
     assert get_response.status_code == 200
-
-    fetched_payload = get_response.json()
-    assert fetched_payload["run_id"] == created_payload["run_id"]
+    fetched_payload = get_response.json()["item"]
+    assert fetched_payload["run_id"] == run_id
     assert fetched_payload["user_goal"] == "Investigate the failed deployment"
 
 
-def test_list_runs_returns_created_runs() -> None:
+def test_list_runs_supports_pagination_and_filters() -> None:
     client = TestClient(app)
 
-    first_response = client.post("/runs", json={"user_goal": "Prepare a rollout plan"})
-    second_response = client.post("/runs", json={"user_goal": "Analyze the incident report"})
+    first_response = client.post(
+        "/runs",
+        json={"user_goal": "Prepare a rollout plan", "workflow_type": "technical_plan"},
+    )
+    second_response = client.post(
+        "/runs",
+        json={
+            "user_goal": "Analyze the incident report",
+            "workflow_type": "document_analysis",
+        },
+    )
 
     assert first_response.status_code == 201
     assert second_response.status_code == 201
 
-    list_response = client.get("/runs")
-    assert list_response.status_code == 200
+    list_response = client.get("/runs?limit=1&offset=0&workflow_type=document_analysis")
 
-    items = list_response.json()["items"]
-    assert len(items) == 2
-    assert items[0]["user_goal"] == "Analyze the incident report"
-    assert items[1]["user_goal"] == "Prepare a rollout plan"
+    assert list_response.status_code == 200
+    payload = list_response.json()
+    assert len(payload["items"]) == 1
+    assert payload["items"][0]["user_goal"] == "Analyze the incident report"
+    assert payload["items"][0]["workflow_type"] == "document_analysis"
+    assert payload["page"] == {
+        "limit": 1,
+        "offset": 0,
+        "total_count": 1,
+        "has_more": False,
+    }
+
+
+def test_run_mutation_endpoints_progress_tasks_and_record_evidence() -> None:
+    client = TestClient(app)
+
+    create_response = client.post("/runs", json={"user_goal": "Handle an incident"})
+    run_id = create_response.json()["item"]["run_id"]
+
+    register_response = client.post(
+        f"/runs/{run_id}/tasks",
+        json={
+            "items": [
+                {
+                    "task_id": "task_1",
+                    "title": "Review logs",
+                    "description": "Review service logs",
+                    "assigned_agent": "planner",
+                    "acceptance_criteria": ["Logs reviewed"],
+                },
+                {
+                    "task_id": "task_2",
+                    "title": "Prepare summary",
+                    "description": "Prepare incident summary",
+                    "assigned_agent": "writer",
+                    "dependency_ids": ["task_1"],
+                    "acceptance_criteria": ["Summary prepared"],
+                },
+            ]
+        },
+    )
+
+    assert register_response.status_code == 200
+    task_statuses = [task["status"] for task in register_response.json()["item"]["tasks"]]
+    assert task_statuses == ["ready", "pending"]
+
+    start_response = client.post(f"/runs/{run_id}/tasks/task_1/start")
+    assert start_response.status_code == 200
+    assert start_response.json()["item"]["current_task_id"] == "task_1"
+
+    complete_response = client.post(f"/runs/{run_id}/tasks/task_1/complete")
+    assert complete_response.status_code == 200
+    task_statuses = [task["status"] for task in complete_response.json()["item"]["tasks"]]
+    assert task_statuses == ["completed", "ready"]
+
+    evidence_response = client.post(
+        f"/runs/{run_id}/evidence",
+        json={
+            "evidence_id": "evidence_1",
+            "source_type": "document",
+            "source_ref": "incident-notes.md",
+            "summary": "Notes confirm the deployment started the issue",
+            "collected_by_agent": "researcher",
+            "confidence": 0.91,
+        },
+    )
+
+    assert evidence_response.status_code == 200
+    assert len(evidence_response.json()["item"]["evidence"]) == 1
+
+
+def test_invalid_task_transition_returns_conflict() -> None:
+    client = TestClient(app)
+
+    create_response = client.post("/runs", json={"user_goal": "Test invalid transition"})
+    run_id = create_response.json()["item"]["run_id"]
+
+    response = client.post(f"/runs/{run_id}/tasks/missing_task/start")
+
+    assert response.status_code == 409
 
 
 def test_get_missing_run_returns_not_found() -> None:
@@ -58,13 +149,14 @@ def test_get_missing_run_returns_not_found() -> None:
     assert response.json()["detail"] == "Run run_missing does not exist"
 
 
-def test_get_run_state_returns_run_snapshot() -> None:
+def test_get_run_state_returns_wrapped_run_snapshot() -> None:
     client = TestClient(app)
 
     create_response = client.post("/runs", json={"user_goal": "Summarize uploaded documents"})
-    run_id = create_response.json()["run_id"]
+    run_id = create_response.json()["item"]["run_id"]
 
     state_response = client.get(f"/runs/{run_id}/state")
 
     assert state_response.status_code == 200
-    assert state_response.json()["run_id"] == run_id
+    assert state_response.json()["item"]["run_id"] == run_id
+    assert state_response.json()["item"]["user_goal"] == "Summarize uploaded documents"
