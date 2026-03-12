@@ -29,9 +29,7 @@ def build_task(
 
 
 def test_register_tasks_marks_dependency_free_tasks_ready() -> None:
-    run_state = create_run_state(
-        RunCreateRequest(user_goal="Create a technical plan for rollout")
-    )
+    run_state = create_run_state(RunCreateRequest(user_goal="Create a technical plan for rollout"))
 
     updated_state = register_tasks(
         run_state,
@@ -49,9 +47,7 @@ def test_register_tasks_marks_dependency_free_tasks_ready() -> None:
 
 
 def test_task_lifecycle_unlocks_dependent_tasks_and_ends_in_verifying() -> None:
-    run_state = create_run_state(
-        RunCreateRequest(user_goal="Investigate a production regression")
-    )
+    run_state = create_run_state(RunCreateRequest(user_goal="Investigate a production regression"))
     run_state = register_tasks(
         run_state,
         [
@@ -79,9 +75,7 @@ def test_task_lifecycle_unlocks_dependent_tasks_and_ends_in_verifying() -> None:
 
 
 def test_record_evidence_appends_validated_evidence() -> None:
-    run_state = create_run_state(
-        RunCreateRequest(user_goal="Analyze incident notes for evidence")
-    )
+    run_state = create_run_state(RunCreateRequest(user_goal="Analyze incident notes for evidence"))
 
     updated_state = record_evidence(
         run_state,

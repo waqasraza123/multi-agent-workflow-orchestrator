@@ -55,14 +55,10 @@ def register_tasks(
         ]
         if unknown_dependency_ids:
             missing = ", ".join(sorted(unknown_dependency_ids))
-            raise StateTransitionError(
-                f"Task {task.task_id} has unknown dependencies: {missing}"
-            )
+            raise StateTransitionError(f"Task {task.task_id} has unknown dependencies: {missing}")
 
     completed_task_ids = _completed_task_ids(run_state.tasks)
-    normalized_tasks = [
-        _normalize_pending_task(task, completed_task_ids) for task in tasks
-    ]
+    normalized_tasks = [_normalize_pending_task(task, completed_task_ids) for task in tasks]
     return _replace_state(
         run_state,
         tasks=[*run_state.tasks, *normalized_tasks],
@@ -114,9 +110,8 @@ def complete_task(
             updated_tasks.append(task.model_copy(update={"status": TaskStatus.COMPLETED}))
             continue
 
-        should_be_ready = (
-            task.status is TaskStatus.PENDING
-            and _dependencies_completed(task, completed_task_ids)
+        should_be_ready = task.status is TaskStatus.PENDING and _dependencies_completed(
+            task, completed_task_ids
         )
         if should_be_ready:
             updated_tasks.append(task.model_copy(update={"status": TaskStatus.READY}))
@@ -141,13 +136,9 @@ def record_evidence(
     run_state: RunStateSnapshot,
     evidence_record: EvidenceRecord,
 ) -> RunStateSnapshot:
-    existing_evidence_ids = {
-        existing_record.evidence_id for existing_record in run_state.evidence
-    }
+    existing_evidence_ids = {existing_record.evidence_id for existing_record in run_state.evidence}
     if evidence_record.evidence_id in existing_evidence_ids:
-        raise StateTransitionError(
-            f"Evidence {evidence_record.evidence_id} already exists"
-        )
+        raise StateTransitionError(f"Evidence {evidence_record.evidence_id} already exists")
 
     return _replace_state(
         run_state,

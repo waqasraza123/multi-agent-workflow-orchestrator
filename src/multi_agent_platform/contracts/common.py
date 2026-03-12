@@ -1,9 +1,9 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 
 def utc_now() -> datetime:
-    return datetime.now(tz=timezone.utc)
+    return datetime.now(tz=UTC)
 
 
 def generate_identifier(prefix: str) -> str:
