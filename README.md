@@ -2,14 +2,14 @@
 
 Production-grade multi-agent research and execution platform.
 
-**Status:** Foundation complete. Core contracts and orchestration state scaffolding are in progress.
+**Status:** Foundation complete. API scaffold, service layer, in-memory repository, and core orchestration state are implemented.
 
 ## Repository structure
 
 - `src/multi_agent_platform/` — Application source package
 - `apps/` — User-facing applications
-- `services/` — Long-running backend services and workers
-- `packages/` — Reserved for future package extraction if justitests/` — Unit, integration, and evaluation tests
+- `services/` — Long-running backend services and wo- `packages/` — Reserved for future package extraction if justified
+- `tests/` — Unit, integration, and evaluation tests
 - `infra/` — Deployment and environment assets
 - `docs/` — Specifications, decisions, and runbooks
 
@@ -22,6 +22,7 @@ Production-grade multi-agent research and execution platform.
 
 - Bootstrap: `make bootstrap`
 - Quality gate: `make check`
+- Run API locally: `make run-api`
 - Format with fixes: `make format`
 
 ## Current implemented scope
@@ -30,5 +31,8 @@ Production-grade multi-agent research and execution platform.
 - Python toolchain baseline
 - Local developer command surface
 - Core contracts and orchestration state scaffold
+- FastAPI application scaffold
+- In-memory run repository
+- Run service and HTTP endpoints
 
 See `docs/toolchain-baseline.md`, `docs/execution-charter.md`, and `docs/architecture-overview.md` for the current source of truth.

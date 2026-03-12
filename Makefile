@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint format format-check typecheck test check
+.PHONY: bootstrap lint format format-check typecheck test check run-api
 
 bootstrap:
 	uv sync --group dev
@@ -23,3 +23,6 @@ check:
 	$(MAKE) format-check
 	$(MAKE) typecheck
 	$(MAKE) test
+
+run-api:
+	uv run uvicorn multi_agent_platform.main:app --reload
