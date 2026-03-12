@@ -2,14 +2,14 @@
 
 Production-grade multi-agent research and execution platform.
 
-**Status:** Foundation only. Repository governance and Python toolchain baseline are in place. No product implementation has started yet.
+**Status:** Foundation complete. Core contracts and orchestration state scaffolding are in progress.
 
 ## Repository structure
 
+- `src/multi_agent_platform/` — Application source package
 - `apps/` — User-facing applications
-- `services/` — Long-running backendvices and workers
-- `packages/` — Shared libraries and domain modules
-- `tests/` — Unit, integration, and evaluation tests
+- `services/` — Long-running backend services and workers
+- `packages/` — Reserved for future package extraction if justitests/` — Unit, integration, and evaluation tests
 - `infra/` — Deployment and environment assets
 - `docs/` — Specifications, decisions, and runbooks
 
@@ -20,15 +20,15 @@ Production-grade multi-agent research and execution platform.
 
 ## Local setup
 
-- Bootstrap: `uv sync --group dev`
+- Bootstrap: `make bootstrap`
 - Quality gate: `make check`
 - Format with fixes: `make format`
 
-## Current foundation scope
+## Current implemented scope
 
-- Root Python toolchain baseline
-- Repository governance documents
+- Repository governance
+- Python toolchain baseline
 - Local developer command surface
-- Repository smoke tests
+- Core contracts and orchestration state scaffold
 
-See `docs/toolchain-baseline.md`, `docs/execution-charter.md`, and `docs/architecture-overview.md` for the current foundation source of truth.
+See `docs/toolchain-baseline.md`, `docs/execution-charter.md`, and `docs/architecture-overview.md` for the current source of truth.

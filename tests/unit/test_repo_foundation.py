@@ -24,9 +24,13 @@ def test_foundation_files_exist() -> None:
         "docs/phase-status.md",
         "docs/toolchain-baseline.md",
         "pyproject.toml",
+        "src/multi_agent_platform/contracts/runs.py",
+        "src/multi_agent_platform/orchestration/state.py",
     ]
     for relative_path in required_files:
-        assert relative_path_exists(relative_pathMissing required file: {relative_path}"
+        assert relative_path_exists(relative_path), (
+            f"Missing required file: {relative_path}"
+        )
 
 
 def test_foundation_directories_exist() -> None:
@@ -38,8 +42,14 @@ def test_foundation_directories_exist() -> None:
         "infra",
         "packages",
         "services",
+        "src",
+        "src/multi_agent_platform",
+        "src/multi_agent_platform/contracts",
+        "src/multi_agent_platform/orchestration",
         "tests",
         "tests/unit",
     ]
     for relative_path in required_directories:
-        assert (repo_root() / relative_path).is_dir(), f"Missing required directory: {relative_path}"
+        assert (repo_root() / relative_path).is_dir(), (
+            f"Missing required directory: {relative_path}"
+        )

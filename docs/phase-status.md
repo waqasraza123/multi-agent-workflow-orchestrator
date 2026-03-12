@@ -2,27 +2,27 @@
 
 ## Current step
 
-Step 6 — CI foundation
+Step 7 — Core contracts and orchestration state scaffold
 
 ## Goal
 
-Add a repository CI workflow that runs the existing local quality gate automatically on GitHub Actions.
-
+Introduce the first real product code with validated contracts, deterministic run state transitions, and test coverage for the basic task lifecycle
 ## Exit criteria
 
-- [ ] `.github/workflows/ci.yml` exists
-- [ ] CI installs Python from `.python-version`
-- [ ] CI installs uv with the official setup action
-- [ ] CI runs `uv sync --locked --group dev`
-- [ ] CI runs `make check`
-- [ ] Repository smoke test enforces workflow presence
-- [ ] `make check` passes locally
-- [ ] Human review is complete
-- [ ] Commit is created
+- [ ] `src/multi_agent_platform/` exists
+- [ ] validated request and state models exist
+- [ ] deterministic orchestration transition functions exist
+- [ ] product code is typechecked
+- [ ] unit tests cover request validation and task lifecycle
+- [ ] `make check` passes
+- [ ] human review is complete
+- [ ] commit is created
 
 ## Completed
 
 - Step 1 — Repository shell
-- Step 2 — Python toolchain baselinep 3 — Local developer command surface
+- Step 2 — Python toolchain baseline
+- Step 3 — Local developer command surface
 - Step 4 — Repository state capture
 - Step 5 — Foundation normalization
+- Step 6 — CI foundation

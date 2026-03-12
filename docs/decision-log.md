@@ -14,26 +14,25 @@
 - Ruff for linting and formatting
 - mypy for static type checking
 - pytest for test execution
-- No runtime dependencies yet
+- No runtime dependencies in the earliest foundation state
 - `uv.lock` is committed
 
 ## Working mode decision
 
 - ChatGPT is the primary technical execution partner
-- Cursor is used only for repository inspection when current file context is needed
+- Cursor is used onlrepository inspection when current file context is needed
 
-## Foundation normalization
+## Implementation structure decision
 
-This step restored the missing repository governance files, added `.editorconfig`, aligned documentation with the current workflow, strengthened the smoke test, and updated ignore rules for mypy and Ruff caches.
+- Product code starts in `src/multi_agent_platform/`
+- Domain boundaries are represented as internal subpackages first
+- Top-level `packages/` remains reserved for future extraction if repository growth justifies it
+- This avoids premature packaging complexity while preserving clean boundaries
 
-## CI foundation
+## Core runtime dependency
 
-- GitHub Actions is the repository CI baseline
-- `actions/setup-python@v6` uses `.python-version`
-- `astral-sh/setup-uv@v7` installs uv and enables cache support
-- CI uses `uv sync --locked --group dev`
-- CI runs `make check`
-- CI triggers on pushes to `main`, pull requests, and manual dispatch
+- Pydantic is the first runtime dependency
+- It is used for typed contracts and validation at the system boundary
 
 ## Still intentionally undecided
 
