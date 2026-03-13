@@ -6,13 +6,22 @@ from multi_agent_platform.contracts.run_commands import (
     TaskRegistrationItem,
     TaskStartRequest,
 )
+from multi_agent_platform.contracts.run_events import RunEventListQuery, RunEventType
 from multi_agent_platform.contracts.run_queries import RunListQuery
 from multi_agent_platform.contracts.runs import RunCreateRequest, TaskStatus, WorkflowType
+from multi_agent_platform.storage.run_event_repository import InMemoryRunEventRepository
 from multi_agent_platform.storage.run_repository import InMemoryRunRepository, RunNotFoundError
 
 
+def build_run_service() -> RunService:
+    return RunService(
+        run_repository=InMemoryRunRepository(),
+        run_event_repository=InMemoryRunEventRepository(),
+    )
+
+
 def test_run_service_creates_and_returns_rich_run_detail() -> None:
-    run_service = RunService(InMemoryRunRepository())
+    run_service = build_run_service()
 
     created_run = run_service.create_run(
         RunCreateRequest(
@@ -30,7 +39,7 @@ def test_run_service_creates_and_returns_rich_run_detail() -> None:
 
 
 def test_run_service_lists_paginated_runs() -> None:
-    run_service = RunService(InMemoryRunRepository())
+    run_service = build_run_service()
 
     run_service.create_run(RunCreateRequest(user_goal="First run"))
     run_service.create_run(RunCreateRequest(user_goal="Second run"))
@@ -45,7 +54,7 @@ def test_run_service_lists_paginated_runs() -> None:
 
 
 def test_run_service_registers_and_progresses_tasks() -> None:
-    run_service = RunService(InMemoryRunRepository())
+    run_service = build_run_service()
     created_run = run_service.create_run(RunCreateRequest(user_goal="Investigate issue"))
     run_id = created_run.item.run_id
 
@@ -91,7 +100,7 @@ def test_run_service_registers_and_progresses_tasks() -> None:
 
 
 def test_run_service_records_evidence() -> None:
-    run_service = RunService(InMemoryRunRepository())
+    run_service = build_run_service()
     created_run = run_service.create_run(RunCreateRequest(user_goal="Collect evidence"))
 
     response = run_service.record_evidence(
@@ -110,8 +119,34 @@ def test_run_service_records_evidence() -> None:
     assert response.item.evidence[0].evidence_id == "evidence_1"
 
 
+def test_run_service_lists_run_events() -> None:
+    run_service = build_run_service()
+    created_run = run_service.create_run(RunCreateRequest(user_goal="Track event history"))
+    run_id = created_run.item.run_id
+    run_service.register_tasks(
+        run_id,
+        TaskRegistrationRequest(
+            items=[
+                TaskRegistrationItem(
+                    task_id="task_1",
+                    title="Review logs",
+                    description="Review service logs",
+                    assigned_agent="planner",
+                    acceptance_criteria=["Logs reviewed"],
+                )
+            ]
+        ),
+    )
+
+    response = run_service.list_run_events(run_id, RunEventListQuery(limit=10, offset=0))
+
+    assert len(response.items) == 2
+    assert response.items[0].event_type is RunEventType.TASKS_REGISTERED
+    assert response.items[1].event_type is RunEventType.RUN_CREATED
+
+
 def test_run_service_raises_for_missing_run() -> None:
-    run_service = RunService(InMemoryRunRepository())
+    run_service = build_run_service()
 
     try:
         run_service.get_run("run_missing")
@@ -122,7 +157,7 @@ def test_run_service_raises_for_missing_run() -> None:
 
 
 def test_run_service_raises_for_invalid_transition() -> None:
-    run_service = RunService(InMemoryRunRepository())
+    run_service = build_run_service()
     created_run = run_service.create_run(RunCreateRequest(user_goal="Invalid transition check"))
 
     try:

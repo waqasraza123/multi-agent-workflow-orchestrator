@@ -2,21 +2,21 @@
 
 ## Current step
 
-Step 10 - Run mutation commands and execution progress endpoints
+Step 11 - Run event log and timeline endpoints
 
 ## Goal
 
-Add mutation commands and endpoints so runs can register tasks, progress task execution, and record evidence through the service and repository boundaries.
+Add explicit run event history, event repository boundaries, service-level event recording, and a timeline API endpoint.
 
 ## Exit criteria
 
-- [ ] task registration command exists
-- [ ] task lifecycle command models exist
-- [ ] evidence recording command exists
-- [ ] repository update path is used by mutation services
-- [ ] service layer supports task registration, start, complete, and evidence recording
-- [ ] API exposes mutation endpoints
-- [ ] API, service, and orchestration tests cover mutation flow
+- [ ] event contracts exist
+- [ ] event query and page contracts exist
+- [ ] event repository abstraction exists
+- [ ] in-memory event repository exists
+- [ ] run service records events for run creation and mutation actions
+- [ ] timeline endpoint exists
+- [ ] API, service, and storage tests cover event history
 - [ ] `make check` passes
 - [ ] human review is complete
 - [ ] commit is created

@@ -10,6 +10,8 @@ from multi_agent_platform.contracts.run_commands import (
     TaskRegistrationRequest,
     TaskStartRequest,
 )
+from multi_agent_platform.contracts.run_event_views import RunEventListResponse
+from multi_agent_platform.contracts.run_events import RunEventListQuery
 from multi_agent_platform.contracts.run_queries import RunListQuery
 from multi_agent_platform.contracts.run_views import RunListResponse, RunResponse, RunStateResponse
 from multi_agent_platform.contracts.runs import RunCreateRequest, RunStatus, WorkflowType
@@ -37,7 +39,15 @@ def build_run_list_query(
     )
 
 
+def build_run_event_list_query(
+    limit: LimitQuery = 20,
+    offset: OffsetQuery = 0,
+) -> RunEventListQuery:
+    return RunEventListQuery(limit=limit, offset=offset)
+
+
 RunListQueryDependency = Annotated[RunListQuery, Depends(build_run_list_query)]
+RunEventListQueryDependency = Annotated[RunEventListQuery, Depends(build_run_event_list_query)]
 
 
 def map_run_error(error: Exception) -> HTTPException:
@@ -45,7 +55,10 @@ def map_run_error(error: Exception) -> HTTPException:
         return HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(error))
     if isinstance(error, StateTransitionError):
         return HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail=str(error))
-    raise HTTPException(status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected run error")
+    raise HTTPException(
+        status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Unexpected run error",
+    )
 
 
 @router.post("", response_model=RunResponse, status_code=http_status.HTTP_201_CREATED)
@@ -82,6 +95,18 @@ def get_run_state(
 ) -> RunStateResponse:
     try:
         return run_service.get_run_state(run_id)
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
+@router.get("/{run_id}/events", response_model=RunEventListResponse)
+def list_run_events(
+    run_id: str,
+    query: RunEventListQueryDependency,
+    run_service: RunServiceDependency,
+) -> RunEventListResponse:
+    try:
+        return run_service.list_run_events(run_id, query)
     except Exception as error:
         raise map_run_error(error) from error
 

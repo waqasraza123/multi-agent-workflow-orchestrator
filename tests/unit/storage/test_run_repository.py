@@ -1,7 +1,12 @@
 from datetime import datetime, timezone
 
 from multi_agent_platform.contracts.run_queries import RunListQuery
-from multi_agent_platform.contracts.runs import RunCreateRequest, RunStateSnapshot, RunStatus, WorkflowType
+from multi_agent_platform.contracts.runs import (
+    RunCreateRequest,
+    RunStateSnapshot,
+    RunStatus,
+    WorkflowType,
+)
 from multi_agent_platform.orchestration.state import create_run_state
 from multi_agent_platform.storage.run_repository import InMemoryRunRepository, RunNotFoundError
 
@@ -116,9 +121,7 @@ def test_repository_update_replaces_existing_run() -> None:
         )
     )
 
-    updated_run = repository.update(
-        created_run.model_copy(update={"status": RunStatus.COMPLETED})
-    )
+    updated_run = repository.update(created_run.model_copy(update={"status": RunStatus.COMPLETED}))
 
     assert updated_run.status is RunStatus.COMPLETED
     assert repository.get("run_1").status is RunStatus.COMPLETED

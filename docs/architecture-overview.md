@@ -10,7 +10,7 @@ This keeps the codebase modular without introducing premature multi-package pack
 
 ## Domain boundaries
 
-- `multi_agent_platform.contracts` - Typed request, query, response, state, entity, and command models
+- `multi_agent_platform.contracts` - Typed request, query, response, state, entity, command, and event models
 - `multi_agent_platform.application` - Use-case orchestration across repositories and domain logic
 - `multi_agent_platform.api` - HTTP routing, dependency wiring, and response shaping
 - `multi_agent_platform.orchestration` - Deterministic workflow state transitions
@@ -22,4 +22,4 @@ This keeps the codebase modular without introducing premature multi-package pack
 
 ## Current implementation boundary
 
-The repository includes a runnable FastAPI app with an application service layer and an in-memory repository. The repository boundary supports query objects, pagination-ready results, and mutation updates for task lifecycle and evidence recording.
+The repository includes a runnable FastAPI app with an application service layer, an in-memory run repository, and an in-memory run event repository. The repository boundary now supports query objects, pagination-ready results, mutation updates, and audit timeline history.

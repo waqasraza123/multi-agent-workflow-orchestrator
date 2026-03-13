@@ -4,6 +4,13 @@ from multi_agent_platform.contracts.run_commands import (
     TaskRegistrationRequest,
     TaskStartRequest,
 )
+from multi_agent_platform.contracts.run_event_views import RunEventListResponse
+from multi_agent_platform.contracts.run_events import (
+    RunEventListQuery,
+    RunEventPage,
+    RunEventRecord,
+    RunEventType,
+)
 from multi_agent_platform.contracts.run_queries import PageInfo, RunListQuery, RunStatePage
 from multi_agent_platform.contracts.run_views import (
     RunDetail,
@@ -36,6 +43,11 @@ __all__ = [
     "RunConstraints",
     "RunCreateRequest",
     "RunDetail",
+    "RunEventListQuery",
+    "RunEventListResponse",
+    "RunEventPage",
+    "RunEventRecord",
+    "RunEventType",
     "RunListQuery",
     "RunListResponse",
     "RunResponse",

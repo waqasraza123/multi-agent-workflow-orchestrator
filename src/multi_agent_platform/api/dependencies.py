@@ -1,4 +1,5 @@
 from multi_agent_platform.application.runs import RunService
+from multi_agent_platform.storage.run_event_repository import InMemoryRunEventRepository
 from multi_agent_platform.storage.run_repository import InMemoryRunRepository
 
 _run_service: RunService | None = None
@@ -7,7 +8,10 @@ _run_service: RunService | None = None
 def get_run_service() -> RunService:
     global _run_service
     if _run_service is None:
-        _run_service = RunService(InMemoryRunRepository())
+        _run_service = RunService(
+            run_repository=InMemoryRunRepository(),
+            run_event_repository=InMemoryRunEventRepository(),
+        )
     return _run_service
 
 

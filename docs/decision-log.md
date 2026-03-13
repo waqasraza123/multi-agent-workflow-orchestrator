@@ -33,12 +33,13 @@
 - FastAPI for the initial HTTP application surface
 - Uvicorn for local ASGI serving
 
-## Mutation workflow decision
+## Event history decision
 
-- Run mutations are exposed as explicit command endpoints
-- Application services own task registration, task start, task completion, and evidence recording
-- Repository update is used after deterministic state transitions
-- API does not call orchestration functions directly
+- Run history is modeled as explicit event records
+- Events are stored behind a dedicated repository abstraction
+- Application services record events after successful state changes
+- Event listing uses a pagination-ready query model
+- Timeline retrieval is a first-class API surface
 
 ## Still intentionally undecided
 

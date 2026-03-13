@@ -69,9 +69,7 @@ class InMemoryRunRepository:
             reverse=True,
         )
         if query.status is not None:
-            run_states = [
-                run_state for run_state in run_states if run_state.status is query.status
-            ]
+            run_states = [run_state for run_state in run_states if run_state.status is query.status]
         if query.workflow_type is not None:
             run_states = [
                 run_state

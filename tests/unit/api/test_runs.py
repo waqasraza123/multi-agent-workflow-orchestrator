@@ -129,6 +129,36 @@ def test_run_mutation_endpoints_progress_tasks_and_record_evidence() -> None:
     assert len(evidence_response.json()["item"]["evidence"]) == 1
 
 
+def test_run_events_endpoint_returns_timeline() -> None:
+    client = TestClient(app)
+
+    create_response = client.post("/runs", json={"user_goal": "Track event history"})
+    run_id = create_response.json()["item"]["run_id"]
+
+    client.post(
+        f"/runs/{run_id}/tasks",
+        json={
+            "items": [
+                {
+                    "task_id": "task_1",
+                    "title": "Review logs",
+                    "description": "Review service logs",
+                    "assigned_agent": "planner",
+                    "acceptance_criteria": ["Logs reviewed"],
+                }
+            ]
+        },
+    )
+
+    response = client.get(f"/runs/{run_id}/events?limit=10&offset=0")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["page"]["total_count"] == 2
+    assert payload["items"][0]["event_type"] == "tasks_registered"
+    assert payload["items"][1]["event_type"] == "run_created"
+
+
 def test_invalid_task_transition_returns_conflict() -> None:
     client = TestClient(app)
 
