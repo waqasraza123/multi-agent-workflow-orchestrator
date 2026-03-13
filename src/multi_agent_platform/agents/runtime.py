@@ -29,7 +29,10 @@ def execute_deterministic_turn(
 
 def build_turn_summary(agent_name: str, task_title: str) -> str:
     if agent_name == "planner":
-        return f"Planner reviewed the task scope for {task_title} and prepared the next execution step."
+        return (
+            f"Planner reviewed the task scope for {task_title} "
+            "and prepared the next execution step."
+        )
     if agent_name == "researcher":
         return f"Researcher collected and synthesized evidence for {task_title}."
     if agent_name == "writer":

@@ -1,3 +1,7 @@
+from multi_agent_platform.contracts.run_approval_views import (
+    RunApprovalListResponse,
+    RunApprovalResponse,
+)
 from multi_agent_platform.contracts.run_approvals import (
     ApprovalDecision,
     ApprovalDecisionRequest,
@@ -6,10 +10,6 @@ from multi_agent_platform.contracts.run_approvals import (
     ApprovalRecord,
     ApprovalRequestCreate,
     ApprovalStatus,
-)
-from multi_agent_platform.contracts.run_approval_views import (
-    RunApprovalListResponse,
-    RunApprovalResponse,
 )
 from multi_agent_platform.contracts.run_commands import (
     EvidenceCreateRequest,

@@ -275,7 +275,10 @@ def test_verification_endpoints_return_reports() -> None:
     assert verify_response.status_code == 200
     assert verify_response.json()["item"]["verdict"] == "pass"
     assert latest_response.status_code == 200
-    assert latest_response.json()["item"]["verification_id"] == verify_response.json()["item"]["verification_id"]
+    assert (
+        latest_response.json()["item"]["verification_id"]
+        == verify_response.json()["item"]["verification_id"]
+    )
 
 
 def test_verification_endpoint_fails_for_incomplete_run() -> None:

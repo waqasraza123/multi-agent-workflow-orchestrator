@@ -57,7 +57,7 @@ from multi_agent_platform.contracts.run_views import (
 )
 from multi_agent_platform.contracts.runs import (
     RunCreateRequest,
-    RunStatus,
+    RunStateSnapshot,
     TaskRecord,
     TaskStatus,
 )
@@ -372,17 +372,19 @@ class RunService:
         report = self._run_verification_repository.get_latest(run_id)
         return RunVerificationResponse(item=report)
 
-    def _find_next_ready_task(self, run_state: RunStateResponse | RunStatus | object) -> TaskRecord | None:
-        if not hasattr(run_state, "tasks"):
-            return None
+    def _find_next_ready_task(
+        self,
+        run_state: RunStateSnapshot,
+    ) -> TaskRecord | None:
         for task in run_state.tasks:
             if task.status is TaskStatus.READY:
                 return task
         return None
 
-    def _find_active_task(self, run_state: RunStateResponse | RunStatus | object) -> TaskRecord | None:
-        if not hasattr(run_state, "current_task_id") or not hasattr(run_state, "tasks"):
-            return None
+    def _find_active_task(
+        self,
+        run_state: RunStateSnapshot,
+    ) -> TaskRecord | None:
         current_task_id = run_state.current_task_id
         if current_task_id is None:
             return None
