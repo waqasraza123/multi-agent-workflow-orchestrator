@@ -6,8 +6,10 @@ from fastapi import status as http_status
 from multi_agent_platform.api.dependencies import get_run_service
 from multi_agent_platform.application.runs import (
     ApprovalTransitionError,
+    PlanningTransitionError,
     RunService,
     StateTransitionError,
+    TurnAdvanceError,
 )
 from multi_agent_platform.contracts.run_approval_views import (
     RunApprovalListResponse,
@@ -27,11 +29,22 @@ from multi_agent_platform.contracts.run_commands import (
 )
 from multi_agent_platform.contracts.run_event_views import RunEventListResponse
 from multi_agent_platform.contracts.run_events import RunEventListQuery
+from multi_agent_platform.contracts.run_plan_views import RunPlanResponse
 from multi_agent_platform.contracts.run_queries import RunListQuery
+from multi_agent_platform.contracts.run_turn_views import (
+    RunTurnAdvanceResponse,
+    RunTurnListResponse,
+)
+from multi_agent_platform.contracts.run_turns import RunTurnListQuery
 from multi_agent_platform.contracts.run_verification_views import RunVerificationResponse
-from multi_agent_platform.contracts.run_views import RunListResponse, RunResponse, RunStateResponse
+from multi_agent_platform.contracts.run_views import (
+    RunListResponse,
+    RunResponse,
+    RunStateResponse,
+)
 from multi_agent_platform.contracts.runs import RunCreateRequest, RunStatus, WorkflowType
 from multi_agent_platform.storage.run_approval_repository import RunApprovalNotFoundError
+from multi_agent_platform.storage.run_plan_repository import RunPlanNotFoundError
 from multi_agent_platform.storage.run_repository import RunNotFoundError
 from multi_agent_platform.storage.run_verification_repository import (
     RunVerificationNotFoundError,
@@ -49,14 +62,14 @@ ApprovalStatusQuery = Annotated[ApprovalStatus | None, Query()]
 def build_run_list_query(
     limit: LimitQuery = 20,
     offset: OffsetQuery = 0,
-    status_filter: StatusQuery = None,
-    workflow_type_filter: WorkflowTypeQuery = None,
+    status: StatusQuery = None,
+    workflow_type: WorkflowTypeQuery = None,
 ) -> RunListQuery:
     return RunListQuery(
         limit=limit,
         offset=offset,
-        status=status_filter,
-        workflow_type=workflow_type_filter,
+        status=status,
+        workflow_type=workflow_type,
     )
 
 
@@ -67,16 +80,24 @@ def build_run_event_list_query(
     return RunEventListQuery(limit=limit, offset=offset)
 
 
+def build_run_turn_list_query(
+    limit: LimitQuery = 20,
+    offset: OffsetQuery = 0,
+) -> RunTurnListQuery:
+    return RunTurnListQuery(limit=limit, offset=offset)
+
+
 def build_approval_list_query(
     limit: LimitQuery = 20,
     offset: OffsetQuery = 0,
-    status_filter: ApprovalStatusQuery = None,
+    status: ApprovalStatusQuery = None,
 ) -> ApprovalListQuery:
-    return ApprovalListQuery(limit=limit, offset=offset, status=status_filter)
+    return ApprovalListQuery(limit=limit, offset=offset, status=status)
 
 
 RunListQueryDependency = Annotated[RunListQuery, Depends(build_run_list_query)]
 RunEventListQueryDependency = Annotated[RunEventListQuery, Depends(build_run_event_list_query)]
+RunTurnListQueryDependency = Annotated[RunTurnListQuery, Depends(build_run_turn_list_query)]
 ApprovalListQueryDependency = Annotated[ApprovalListQuery, Depends(build_approval_list_query)]
 
 
@@ -85,11 +106,17 @@ def map_run_error(error: Exception) -> HTTPException:
         return HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(error))
     if isinstance(error, RunApprovalNotFoundError):
         return HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(error))
+    if isinstance(error, RunPlanNotFoundError):
+        return HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(error))
     if isinstance(error, RunVerificationNotFoundError):
         return HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(error))
     if isinstance(error, ApprovalTransitionError):
         return HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail=str(error))
+    if isinstance(error, PlanningTransitionError):
+        return HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail=str(error))
     if isinstance(error, StateTransitionError):
+        return HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail=str(error))
+    if isinstance(error, TurnAdvanceError):
         return HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail=str(error))
     raise HTTPException(
         status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -147,6 +174,29 @@ def list_run_events(
         raise map_run_error(error) from error
 
 
+@router.get("/{run_id}/turns", response_model=RunTurnListResponse)
+def list_run_turns(
+    run_id: str,
+    query: RunTurnListQueryDependency,
+    run_service: RunServiceDependency,
+) -> RunTurnListResponse:
+    try:
+        return run_service.list_turns(run_id, query)
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
+@router.post("/{run_id}/turns/advance", response_model=RunTurnAdvanceResponse)
+def advance_run_turn(
+    run_id: str,
+    run_service: RunServiceDependency,
+) -> RunTurnAdvanceResponse:
+    try:
+        return run_service.advance_turn(run_id)
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
 @router.get("/{run_id}/approvals", response_model=RunApprovalListResponse)
 def list_run_approvals(
     run_id: str,
@@ -180,6 +230,28 @@ def decide_run_approval(
 ) -> RunApprovalResponse:
     try:
         return run_service.decide_approval(run_id, approval_id, request)
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
+@router.post("/{run_id}/plan", response_model=RunPlanResponse)
+def generate_run_plan(
+    run_id: str,
+    run_service: RunServiceDependency,
+) -> RunPlanResponse:
+    try:
+        return run_service.generate_plan(run_id)
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
+@router.get("/{run_id}/plans/latest", response_model=RunPlanResponse)
+def get_latest_run_plan(
+    run_id: str,
+    run_service: RunServiceDependency,
+) -> RunPlanResponse:
+    try:
+        return run_service.get_latest_plan(run_id)
     except Exception as error:
         raise map_run_error(error) from error
 

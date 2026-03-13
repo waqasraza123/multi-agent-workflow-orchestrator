@@ -56,6 +56,53 @@ def test_create_and_get_run_endpoints_return_wrapped_run_detail() -> None:
     assert fetched_payload["user_goal"] == "Investigate the failed deployment"
 
 
+def test_plan_and_turn_endpoints_progress_run_to_verifying() -> None:
+    client = TestClient(app)
+
+    create_response = client.post(
+        "/runs",
+        json={"user_goal": "Create a technical plan", "workflow_type": "technical_plan"},
+    )
+    run_id = create_response.json()["item"]["run_id"]
+
+    plan_response = client.post(f"/runs/{run_id}/plan")
+    first_turn = client.post(f"/runs/{run_id}/turns/advance")
+    second_turn = client.post(f"/runs/{run_id}/turns/advance")
+    third_turn = client.post(f"/runs/{run_id}/turns/advance")
+    turn_list = client.get(f"/runs/{run_id}/turns?limit=10&offset=0")
+
+    assert plan_response.status_code == 200
+    assert first_turn.status_code == 200
+    assert second_turn.status_code == 200
+    assert third_turn.status_code == 200
+    assert third_turn.json()["run_state"]["status"] == "verifying"
+    assert turn_list.status_code == 200
+    assert turn_list.json()["page"]["total_count"] == 3
+
+
+def test_advancing_turn_without_ready_task_returns_conflict() -> None:
+    client = TestClient(app)
+
+    create_response = client.post("/runs", json={"user_goal": "No tasks yet"})
+    run_id = create_response.json()["item"]["run_id"]
+
+    response = client.post(f"/runs/{run_id}/turns/advance")
+
+    assert response.status_code == 409
+
+
+def test_replanning_run_with_existing_tasks_returns_conflict() -> None:
+    client = TestClient(app)
+
+    create_response = client.post("/runs", json={"user_goal": "Manual planning flow"})
+    run_id = create_response.json()["item"]["run_id"]
+    register_single_task(client, run_id)
+
+    response = client.post(f"/runs/{run_id}/plan")
+
+    assert response.status_code == 409
+
+
 def test_list_runs_supports_pagination_and_filters() -> None:
     client = TestClient(app)
 
@@ -228,10 +275,7 @@ def test_verification_endpoints_return_reports() -> None:
     assert verify_response.status_code == 200
     assert verify_response.json()["item"]["verdict"] == "pass"
     assert latest_response.status_code == 200
-    assert (
-        latest_response.json()["item"]["verification_id"]
-        == verify_response.json()["item"]["verification_id"]
-    )
+    assert latest_response.json()["item"]["verification_id"] == verify_response.json()["item"]["verification_id"]
 
 
 def test_verification_endpoint_fails_for_incomplete_run() -> None:

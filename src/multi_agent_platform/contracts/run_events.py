@@ -18,6 +18,7 @@ class RunEventType(StrEnum):
     APPROVAL_REQUESTED = "approval_requested"
     APPROVAL_DECIDED = "approval_decided"
     PLAN_GENERATED = "plan_generated"
+    TURN_EXECUTED = "turn_executed"
 
 
 class RunEventRecord(BaseModel):

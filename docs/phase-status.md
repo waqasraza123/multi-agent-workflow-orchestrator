@@ -2,22 +2,22 @@
 
 ## Current step
 
-Step 14 - Deterministic planning templates and planning endpoints
+Step 15 - Deterministic agent turn engine and turn history
 
 ## Goal
 
-Add deterministic planning templates, planning report models, service-level planning generation, and API endpoints to generate and fetch the latest plan for a run.
+Add deterministic turn contracts, turn storage, service-level turn advancement, turn history endpoints, and automatic task progression through agent turns.
 
 ## Exit criteria
 
-- [ ] planning contracts exist
-- [ ] planning repository abstraction exists
-- [ ] in-memory planning repository exists
-- [ ] deterministic planner exists
-- [ ] run service can generate a plan and fetch the latest plan
-- [ ] planning event is recorded
-- [ ] planning endpoints exist
-- [ ] API, service, storage, and planner tests cover planning behavior
+- [ ] turn contracts exist
+- [ ] turn repository abstraction exists
+- [ ] in-memory turn repository exists
+- [ ] deterministic agent runtime exists
+- [ ] run service can advance turns and list turn history
+- [ ] turn execution records events
+- [ ] turn endpoints exist
+- [ ] API, service, storage, and runtime tests cover turn behavior
 - [ ] `make check` passes
 - [ ] human review is complete
 - [ ] commit is created

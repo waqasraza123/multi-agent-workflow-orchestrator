@@ -33,13 +33,14 @@
 - FastAPI for the initial HTTP application surface
 - Uvicorn for local ASGI serving
 
-## Planning decision
+## Turn execution decision
 
-- Planning is modeled as an explicit report plus generated task graph
-- Planning is deterministic at this stage
-- Workflow type selects a planning template
-- Generated tasks are registered through the same orchestration state transition path as manual task registration
-- Planning completion is recorded in the run event timeline
+- Turn execution is modeled as explicit turn records
+- Turn advancement is deterministic at this stage
+- The next ready task is automatically started when no task is active
+- A deterministic agent runtime executes one task per turn
+- Each turn can record evidence and complete the active task
+- Turn execution is recorded in both turn storage and the run event timeline
 
 ## Still intentionally undecided
 

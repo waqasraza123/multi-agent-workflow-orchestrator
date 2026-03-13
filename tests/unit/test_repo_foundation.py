@@ -24,10 +24,14 @@ def test_foundation_files_exist() -> None:
         "docs/phase-status.md",
         "docs/toolchain-baseline.md",
         "pyproject.toml",
+        "src/multi_agent_platform/agents/__init__.py",
+        "src/multi_agent_platform/agents/runtime.py",
         "src/multi_agent_platform/api/app.py",
         "src/multi_agent_platform/api/routes/runs.py",
         "src/multi_agent_platform/application/run_approvals.py",
         "src/multi_agent_platform/application/run_events.py",
+        "src/multi_agent_platform/application/run_plans.py",
+        "src/multi_agent_platform/application/run_turns.py",
         "src/multi_agent_platform/application/run_verifications.py",
         "src/multi_agent_platform/application/run_views.py",
         "src/multi_agent_platform/application/runs.py",
@@ -36,19 +40,30 @@ def test_foundation_files_exist() -> None:
         "src/multi_agent_platform/contracts/run_commands.py",
         "src/multi_agent_platform/contracts/run_event_views.py",
         "src/multi_agent_platform/contracts/run_events.py",
+        "src/multi_agent_platform/contracts/run_plan_views.py",
+        "src/multi_agent_platform/contracts/run_plans.py",
         "src/multi_agent_platform/contracts/run_queries.py",
+        "src/multi_agent_platform/contracts/run_turn_views.py",
+        "src/multi_agent_platform/contracts/run_turns.py",
         "src/multi_agent_platform/contracts/run_verification_views.py",
         "src/multi_agent_platform/contracts/run_verifications.py",
         "src/multi_agent_platform/contracts/run_views.py",
-        "src/multi_agent_platform/contracts/runs.py",
         "src/multi_agent_platform/orchestration/state.py",
+        "src/multi_agent_platform/planning/__init__.py",
+        "src/multi_agent_platform/planning/templates.py",
         "src/multi_agent_platform/storage/run_approval_repository.py",
         "src/multi_agent_platform/storage/run_event_repository.py",
+        "src/multi_agent_platform/storage/run_plan_repository.py",
         "src/multi_agent_platform/storage/run_repository.py",
+        "src/multi_agent_platform/storage/run_turn_repository.py",
         "src/multi_agent_platform/storage/run_verification_repository.py",
+        "tests/unit/agents/test_runtime.py",
+        "tests/unit/storage/test_run_turn_repository.py",
     ]
     for relative_path in required_files:
-        assert relative_path_exists(relative_path), f"Missing required file: {relative_path}"
+        assert relative_path_exists(relative_path), (
+            f"Missing required file: {relative_path}"
+        )
 
 
 def test_foundation_directories_exist() -> None:
@@ -62,16 +77,21 @@ def test_foundation_directories_exist() -> None:
         "services",
         "src",
         "src/multi_agent_platform",
+        "src/multi_agent_platform/agents",
         "src/multi_agent_platform/api",
         "src/multi_agent_platform/api/routes",
         "src/multi_agent_platform/application",
         "src/multi_agent_platform/contracts",
         "src/multi_agent_platform/orchestration",
+        "src/multi_agent_platform/planning",
         "src/multi_agent_platform/storage",
         "tests",
         "tests/unit",
+        "tests/unit/agents",
         "tests/unit/api",
         "tests/unit/application",
+        "tests/unit/contracts",
+        "tests/unit/planning",
         "tests/unit/storage",
     ]
     for relative_path in required_directories:

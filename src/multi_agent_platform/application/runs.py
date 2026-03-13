@@ -1,8 +1,14 @@
+from multi_agent_platform.agents.runtime import execute_deterministic_turn
 from multi_agent_platform.application.run_approvals import (
     build_run_approval_list_response,
     build_run_approval_response,
 )
 from multi_agent_platform.application.run_events import build_run_event_list_response
+from multi_agent_platform.application.run_plans import build_run_plan_response
+from multi_agent_platform.application.run_turns import (
+    build_run_turn_advance_response,
+    build_run_turn_list_response,
+)
 from multi_agent_platform.application.run_verifications import build_run_verification_report
 from multi_agent_platform.application.run_views import (
     build_run_list_response,
@@ -33,10 +39,28 @@ from multi_agent_platform.contracts.run_events import (
     RunEventRecord,
     RunEventType,
 )
+from multi_agent_platform.contracts.run_plan_views import RunPlanResponse
 from multi_agent_platform.contracts.run_queries import RunListQuery
+from multi_agent_platform.contracts.run_turn_views import (
+    RunTurnAdvanceResponse,
+    RunTurnListResponse,
+)
+from multi_agent_platform.contracts.run_turns import (
+    RunTurnListQuery,
+    RunTurnRecord,
+)
 from multi_agent_platform.contracts.run_verification_views import RunVerificationResponse
-from multi_agent_platform.contracts.run_views import RunListResponse, RunResponse, RunStateResponse
-from multi_agent_platform.contracts.runs import RunCreateRequest
+from multi_agent_platform.contracts.run_views import (
+    RunListResponse,
+    RunResponse,
+    RunStateResponse,
+)
+from multi_agent_platform.contracts.runs import (
+    RunCreateRequest,
+    RunStatus,
+    TaskRecord,
+    TaskStatus,
+)
 from multi_agent_platform.orchestration.state import (
     StateTransitionError,
     complete_task,
@@ -45,15 +69,26 @@ from multi_agent_platform.orchestration.state import (
     register_tasks,
     start_task,
 )
+from multi_agent_platform.planning.templates import build_run_plan
 from multi_agent_platform.storage.run_approval_repository import RunApprovalRepository
 from multi_agent_platform.storage.run_event_repository import RunEventRepository
+from multi_agent_platform.storage.run_plan_repository import RunPlanRepository
 from multi_agent_platform.storage.run_repository import RunRepository
+from multi_agent_platform.storage.run_turn_repository import RunTurnRepository
 from multi_agent_platform.storage.run_verification_repository import (
     RunVerificationRepository,
 )
 
 
 class ApprovalTransitionError(ValueError):
+    pass
+
+
+class PlanningTransitionError(ValueError):
+    pass
+
+
+class TurnAdvanceError(ValueError):
     pass
 
 
@@ -64,11 +99,15 @@ class RunService:
         run_event_repository: RunEventRepository,
         run_verification_repository: RunVerificationRepository,
         run_approval_repository: RunApprovalRepository,
+        run_plan_repository: RunPlanRepository,
+        run_turn_repository: RunTurnRepository,
     ) -> None:
         self._run_repository = run_repository
         self._run_event_repository = run_event_repository
         self._run_verification_repository = run_verification_repository
         self._run_approval_repository = run_approval_repository
+        self._run_plan_repository = run_plan_repository
+        self._run_turn_repository = run_turn_repository
 
     def create_run(self, request: RunCreateRequest) -> RunResponse:
         run_state = create_run_state(request)
@@ -94,6 +133,92 @@ class RunService:
     def list_runs(self, query: RunListQuery) -> RunListResponse:
         run_state_page = self._run_repository.list(query)
         return build_run_list_response(run_state_page)
+
+    def generate_plan(self, run_id: str) -> RunPlanResponse:
+        run_state = self._run_repository.get(run_id)
+        if run_state.tasks:
+            raise PlanningTransitionError(
+                f"Run {run_id} already has registered tasks and cannot be planned again"
+            )
+        run_plan = build_run_plan(run_state)
+        stored_plan = self._run_plan_repository.save(run_plan)
+        updated_run_state = register_tasks(
+            run_state,
+            [planned_task.to_task_record() for planned_task in stored_plan.tasks],
+        )
+        self._run_repository.update(updated_run_state)
+        self._record_event(
+            run_id=run_id,
+            event_type=RunEventType.PLAN_GENERATED,
+            payload={
+                "plan_id": stored_plan.plan_id,
+                "template_name": stored_plan.template_name,
+            },
+        )
+        self._record_event(
+            run_id=run_id,
+            event_type=RunEventType.TASKS_REGISTERED,
+            payload={"task_ids": [task.task_id for task in stored_plan.tasks]},
+        )
+        return build_run_plan_response(stored_plan)
+
+    def get_latest_plan(self, run_id: str) -> RunPlanResponse:
+        self._run_repository.get(run_id)
+        report = self._run_plan_repository.get_latest(run_id)
+        return build_run_plan_response(report)
+
+    def advance_turn(self, run_id: str) -> RunTurnAdvanceResponse:
+        run_state = self._run_repository.get(run_id)
+        if run_state.current_task_id is None:
+            next_task = self._find_next_ready_task(run_state)
+            if next_task is None:
+                raise TurnAdvanceError(f"Run {run_id} has no ready task to advance")
+            run_state = start_task(run_state, next_task.task_id)
+
+        active_task = self._find_active_task(run_state)
+        if active_task is None:
+            raise TurnAdvanceError(f"Run {run_id} does not have an active task")
+
+        turn_result = execute_deterministic_turn(run_state, active_task)
+        evidence_ids: list[str] = []
+
+        for evidence_record in turn_result.evidence_records:
+            run_state = record_evidence(run_state, evidence_record)
+            evidence_ids.append(evidence_record.evidence_id)
+
+        run_state = complete_task(run_state, active_task.task_id)
+        stored_run_state = self._run_repository.update(run_state)
+
+        turn_record = self._run_turn_repository.save(
+            RunTurnRecord(
+                run_id=run_id,
+                task_id=active_task.task_id,
+                agent_name=active_task.assigned_agent,
+                summary=turn_result.summary,
+                evidence_ids=evidence_ids,
+                resulting_run_status=stored_run_state.status,
+            )
+        )
+
+        self._record_event(
+            run_id=run_id,
+            event_type=RunEventType.TURN_EXECUTED,
+            payload={
+                "turn_id": turn_record.turn_id,
+                "task_id": turn_record.task_id,
+                "agent_name": turn_record.agent_name,
+            },
+        )
+        return build_run_turn_advance_response(turn_record, stored_run_state)
+
+    def list_turns(
+        self,
+        run_id: str,
+        query: RunTurnListQuery,
+    ) -> RunTurnListResponse:
+        self._run_repository.get(run_id)
+        run_turn_page = self._run_turn_repository.list(run_id, query)
+        return build_run_turn_list_response(run_turn_page)
 
     def list_run_events(
         self,
@@ -247,6 +372,25 @@ class RunService:
         report = self._run_verification_repository.get_latest(run_id)
         return RunVerificationResponse(item=report)
 
+    def _find_next_ready_task(self, run_state: RunStateResponse | RunStatus | object) -> TaskRecord | None:
+        if not hasattr(run_state, "tasks"):
+            return None
+        for task in run_state.tasks:
+            if task.status is TaskStatus.READY:
+                return task
+        return None
+
+    def _find_active_task(self, run_state: RunStateResponse | RunStatus | object) -> TaskRecord | None:
+        if not hasattr(run_state, "current_task_id") or not hasattr(run_state, "tasks"):
+            return None
+        current_task_id = run_state.current_task_id
+        if current_task_id is None:
+            return None
+        for task in run_state.tasks:
+            if task.task_id == current_task_id:
+                return task
+        return None
+
     def _record_event(
         self,
         run_id: str,
@@ -269,4 +413,10 @@ class RunService:
         return ApprovalStatus.REVISION_REQUESTED
 
 
-__all__ = ["ApprovalTransitionError", "RunService", "StateTransitionError"]
+__all__ = [
+    "ApprovalTransitionError",
+    "PlanningTransitionError",
+    "RunService",
+    "StateTransitionError",
+    "TurnAdvanceError",
+]

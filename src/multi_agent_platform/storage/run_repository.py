@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from typing import Protocol
 
 from multi_agent_platform.contracts.run_queries import PageInfo, RunListQuery, RunStatePage
@@ -47,7 +48,7 @@ class InMemoryRunRepository:
         return run_state.model_copy(deep=True)
 
     def list(self, query: RunListQuery) -> RunStatePage:
-        filtered_states = self.filtered_states(query)
+        filtered_states = self._filtered_states(query)
         total_count = len(filtered_states)
         start_index = query.offset
         end_index = start_index + query.limit
@@ -62,7 +63,7 @@ class InMemoryRunRepository:
             ),
         )
 
-    def filtered_states(self, query: RunListQuery) -> list[RunStateSnapshot]:
+    def _filtered_states(self, query: RunListQuery) -> Sequence[RunStateSnapshot]:
         run_states = sorted(
             self._run_states.values(),
             key=lambda run_state: (run_state.created_at, run_state.run_id),

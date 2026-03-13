@@ -1,7 +1,9 @@
 from multi_agent_platform.application.runs import (
     ApprovalTransitionError,
+    PlanningTransitionError,
     RunService,
     StateTransitionError,
+    TurnAdvanceError,
 )
 from multi_agent_platform.contracts.run_approvals import (
     ApprovalDecision,
@@ -13,17 +15,25 @@ from multi_agent_platform.contracts.run_approvals import (
 from multi_agent_platform.contracts.run_commands import (
     EvidenceCreateRequest,
     TaskCompleteRequest,
-    TaskRegistrationItem,
     TaskRegistrationRequest,
+    TaskRegistrationItem,
     TaskStartRequest,
 )
 from multi_agent_platform.contracts.run_events import RunEventListQuery, RunEventType
 from multi_agent_platform.contracts.run_queries import RunListQuery
+from multi_agent_platform.contracts.run_turns import RunTurnListQuery
 from multi_agent_platform.contracts.run_verifications import VerificationVerdict
-from multi_agent_platform.contracts.runs import RunCreateRequest, TaskStatus, WorkflowType
+from multi_agent_platform.contracts.runs import (
+    RunCreateRequest,
+    RunStatus,
+    TaskStatus,
+    WorkflowType,
+)
 from multi_agent_platform.storage.run_approval_repository import InMemoryRunApprovalRepository
 from multi_agent_platform.storage.run_event_repository import InMemoryRunEventRepository
+from multi_agent_platform.storage.run_plan_repository import InMemoryRunPlanRepository
 from multi_agent_platform.storage.run_repository import InMemoryRunRepository, RunNotFoundError
+from multi_agent_platform.storage.run_turn_repository import InMemoryRunTurnRepository
 from multi_agent_platform.storage.run_verification_repository import (
     InMemoryRunVerificationRepository,
 )
@@ -35,6 +45,8 @@ def build_run_service() -> RunService:
         run_event_repository=InMemoryRunEventRepository(),
         run_verification_repository=InMemoryRunVerificationRepository(),
         run_approval_repository=InMemoryRunApprovalRepository(),
+        run_plan_repository=InMemoryRunPlanRepository(),
+        run_turn_repository=InMemoryRunTurnRepository(),
     )
 
 
@@ -83,6 +95,79 @@ def test_run_service_lists_paginated_runs() -> None:
     assert run_list.page.offset == 0
     assert run_list.page.total_count == 2
     assert run_list.page.has_more is True
+
+
+def test_run_service_generates_plan_and_registers_tasks() -> None:
+    run_service = build_run_service()
+    created_run = run_service.create_run(
+        RunCreateRequest(
+            user_goal="Create a delivery plan",
+            workflow_type=WorkflowType.TECHNICAL_PLAN,
+        )
+    )
+    run_id = created_run.item.run_id
+
+    plan_response = run_service.generate_plan(run_id)
+    latest_plan = run_service.get_latest_plan(run_id)
+    run_state = run_service.get_run_state(run_id)
+    event_response = run_service.list_run_events(run_id, RunEventListQuery(limit=10, offset=0))
+
+    assert plan_response.item.plan_id == latest_plan.item.plan_id
+    assert len(plan_response.item.tasks) == 3
+    assert len(run_state.item.tasks) == 3
+    assert event_response.items[0].event_type is RunEventType.TASKS_REGISTERED
+    assert event_response.items[1].event_type is RunEventType.PLAN_GENERATED
+
+
+def test_run_service_advances_planned_run_through_turns() -> None:
+    run_service = build_run_service()
+    created_run = run_service.create_run(
+        RunCreateRequest(
+            user_goal="Create a technical delivery plan",
+            workflow_type=WorkflowType.TECHNICAL_PLAN,
+        )
+    )
+    run_id = created_run.item.run_id
+    run_service.generate_plan(run_id)
+
+    first_turn = run_service.advance_turn(run_id)
+    second_turn = run_service.advance_turn(run_id)
+    third_turn = run_service.advance_turn(run_id)
+    turn_list = run_service.list_turns(run_id, RunTurnListQuery(limit=10, offset=0))
+
+    assert first_turn.turn.agent_name == "planner"
+    assert len(first_turn.run_state.evidence) == 1
+    assert second_turn.turn.agent_name == "researcher"
+    assert third_turn.turn.agent_name == "writer"
+    assert third_turn.run_state.status is RunStatus.VERIFYING
+    assert len(turn_list.items) == 3
+    assert turn_list.page.total_count == 3
+
+
+def test_run_service_rejects_turn_advance_without_ready_task() -> None:
+    run_service = build_run_service()
+    created_run = run_service.create_run(RunCreateRequest(user_goal="No tasks yet"))
+
+    try:
+        run_service.advance_turn(created_run.item.run_id)
+    except TurnAdvanceError:
+        return
+
+    raise AssertionError("Expected TurnAdvanceError when no ready task exists")
+
+
+def test_run_service_rejects_planning_when_tasks_already_exist() -> None:
+    run_service = build_run_service()
+    created_run = run_service.create_run(RunCreateRequest(user_goal="Manual planning"))
+    run_id = created_run.item.run_id
+    run_service.register_tasks(run_id, build_single_task_request())
+
+    try:
+        run_service.generate_plan(run_id)
+    except PlanningTransitionError:
+        return
+
+    raise AssertionError("Expected PlanningTransitionError when planning a run with tasks")
 
 
 def test_run_service_registers_and_progresses_tasks() -> None:
@@ -148,7 +233,7 @@ def test_run_service_requests_and_decides_approval() -> None:
             requested_action="Send deployment notice",
             reason="External communication is required",
             risk_summary="Incorrect message could confuse users",
-            proposed_next_step="Wait for approver response",
+            proposed_next_step="Wait for reviewer response",
         ),
     )
     decision_response = run_service.decide_approval(
