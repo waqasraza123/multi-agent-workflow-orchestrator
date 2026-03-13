@@ -13,9 +13,13 @@ from multi_agent_platform.contracts.run_commands import (
 from multi_agent_platform.contracts.run_event_views import RunEventListResponse
 from multi_agent_platform.contracts.run_events import RunEventListQuery
 from multi_agent_platform.contracts.run_queries import RunListQuery
+from multi_agent_platform.contracts.run_verification_views import RunVerificationResponse
 from multi_agent_platform.contracts.run_views import RunListResponse, RunResponse, RunStateResponse
 from multi_agent_platform.contracts.runs import RunCreateRequest, RunStatus, WorkflowType
 from multi_agent_platform.storage.run_repository import RunNotFoundError
+from multi_agent_platform.storage.run_verification_repository import (
+    RunVerificationNotFoundError,
+)
 
 router = APIRouter(prefix="/runs", tags=["runs"])
 RunServiceDependency = Annotated[RunService, Depends(get_run_service)]
@@ -52,6 +56,8 @@ RunEventListQueryDependency = Annotated[RunEventListQuery, Depends(build_run_eve
 
 def map_run_error(error: Exception) -> HTTPException:
     if isinstance(error, RunNotFoundError):
+        return HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(error))
+    if isinstance(error, RunVerificationNotFoundError):
         return HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(error))
     if isinstance(error, StateTransitionError):
         return HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail=str(error))
@@ -107,6 +113,28 @@ def list_run_events(
 ) -> RunEventListResponse:
     try:
         return run_service.list_run_events(run_id, query)
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
+@router.post("/{run_id}/verify", response_model=RunVerificationResponse)
+def verify_run(
+    run_id: str,
+    run_service: RunServiceDependency,
+) -> RunVerificationResponse:
+    try:
+        return run_service.verify_run(run_id)
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
+@router.get("/{run_id}/verifications/latest", response_model=RunVerificationResponse)
+def get_latest_verification(
+    run_id: str,
+    run_service: RunServiceDependency,
+) -> RunVerificationResponse:
+    try:
+        return run_service.get_latest_verification(run_id)
     except Exception as error:
         raise map_run_error(error) from error
 

@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
@@ -13,6 +14,7 @@ class RunEventType(StrEnum):
     TASK_STARTED = "task_started"
     TASK_COMPLETED = "task_completed"
     EVIDENCE_RECORDED = "evidence_recorded"
+    VERIFICATION_COMPLETED = "verification_completed"
 
 
 class RunEventRecord(BaseModel):
@@ -21,7 +23,7 @@ class RunEventRecord(BaseModel):
     event_id: str = Field(default_factory=lambda: generate_identifier("event"))
     run_id: str
     event_type: RunEventType
-    occurred_at: object = Field(default_factory=utc_now)
+    occurred_at: datetime = Field(default_factory=utc_now)
     payload: dict[str, Any] = Field(default_factory=dict)
 
 

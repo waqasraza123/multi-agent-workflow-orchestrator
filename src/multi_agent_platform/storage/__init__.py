@@ -8,12 +8,20 @@ from multi_agent_platform.storage.run_repository import (
     RunNotFoundError,
     RunRepository,
 )
+from multi_agent_platform.storage.run_verification_repository import (
+    InMemoryRunVerificationRepository,
+    RunVerificationNotFoundError,
+    RunVerificationRepository,
+)
 
 __all__ = [
     "InMemoryRunEventRepository",
     "InMemoryRunRepository",
+    "InMemoryRunVerificationRepository",
     "RunAlreadyExistsError",
     "RunEventRepository",
     "RunNotFoundError",
     "RunRepository",
+    "RunVerificationNotFoundError",
+    "RunVerificationRepository",
 ]

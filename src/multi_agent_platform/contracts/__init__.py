@@ -12,6 +12,12 @@ from multi_agent_platform.contracts.run_events import (
     RunEventType,
 )
 from multi_agent_platform.contracts.run_queries import PageInfo, RunListQuery, RunStatePage
+from multi_agent_platform.contracts.run_verification_views import RunVerificationResponse
+from multi_agent_platform.contracts.run_verifications import (
+    RunVerificationReport,
+    VerificationCheck,
+    VerificationVerdict,
+)
 from multi_agent_platform.contracts.run_views import (
     RunDetail,
     RunListResponse,
@@ -56,10 +62,14 @@ __all__ = [
     "RunStateSnapshot",
     "RunStatus",
     "RunSummary",
+    "RunVerificationReport",
+    "RunVerificationResponse",
     "TaskCompleteRequest",
     "TaskRecord",
     "TaskRegistrationRequest",
     "TaskStartRequest",
     "TaskStatus",
+    "VerificationCheck",
+    "VerificationVerdict",
     "WorkflowType",
 ]

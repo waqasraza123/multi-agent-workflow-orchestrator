@@ -1,4 +1,5 @@
 from multi_agent_platform.application.run_events import build_run_event_list_response
+from multi_agent_platform.application.run_verifications import build_run_verification_report
 from multi_agent_platform.application.run_views import (
     build_run_list_response,
     build_run_response,
@@ -17,6 +18,7 @@ from multi_agent_platform.contracts.run_events import (
     RunEventType,
 )
 from multi_agent_platform.contracts.run_queries import RunListQuery
+from multi_agent_platform.contracts.run_verification_views import RunVerificationResponse
 from multi_agent_platform.contracts.run_views import RunListResponse, RunResponse, RunStateResponse
 from multi_agent_platform.contracts.runs import RunCreateRequest
 from multi_agent_platform.orchestration.state import (
@@ -29,6 +31,9 @@ from multi_agent_platform.orchestration.state import (
 )
 from multi_agent_platform.storage.run_event_repository import RunEventRepository
 from multi_agent_platform.storage.run_repository import RunRepository
+from multi_agent_platform.storage.run_verification_repository import (
+    RunVerificationRepository,
+)
 
 
 class RunService:
@@ -36,9 +41,11 @@ class RunService:
         self,
         run_repository: RunRepository,
         run_event_repository: RunEventRepository,
+        run_verification_repository: RunVerificationRepository,
     ) -> None:
         self._run_repository = run_repository
         self._run_event_repository = run_event_repository
+        self._run_verification_repository = run_verification_repository
 
     def create_run(self, request: RunCreateRequest) -> RunResponse:
         run_state = create_run_state(request)
@@ -80,12 +87,13 @@ class RunService:
         request: TaskRegistrationRequest,
     ) -> RunStateResponse:
         run_state = self._run_repository.get(run_id)
-        updated_run_state = register_tasks(run_state, request.to_task_records())
+        task_records = request.to_task_records()
+        updated_run_state = register_tasks(run_state, task_records)
         stored_run_state = self._run_repository.update(updated_run_state)
         self._record_event(
             run_id=run_id,
             event_type=RunEventType.TASKS_REGISTERED,
-            payload={"task_ids": [task.task_id for task in request.to_task_records()]},
+            payload={"task_ids": [task.task_id for task in task_records]},
         )
         return build_run_state_response(stored_run_state)
 
@@ -133,6 +141,22 @@ class RunService:
             payload={"evidence_id": request.evidence_id},
         )
         return build_run_state_response(stored_run_state)
+
+    def verify_run(self, run_id: str) -> RunVerificationResponse:
+        run_state = self._run_repository.get(run_id)
+        report = build_run_verification_report(run_state)
+        stored_report = self._run_verification_repository.save(report)
+        self._record_event(
+            run_id=run_id,
+            event_type=RunEventType.VERIFICATION_COMPLETED,
+            payload={"verdict": stored_report.verdict.value},
+        )
+        return RunVerificationResponse(item=stored_report)
+
+    def get_latest_verification(self, run_id: str) -> RunVerificationResponse:
+        self._run_repository.get(run_id)
+        report = self._run_verification_repository.get_latest(run_id)
+        return RunVerificationResponse(item=report)
 
     def _record_event(
         self,

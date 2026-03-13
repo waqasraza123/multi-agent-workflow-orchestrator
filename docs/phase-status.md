@@ -2,21 +2,22 @@
 
 ## Current step
 
-Step 11 - Run event log and timeline endpoints
+Step 12 - Deterministic verification reports and readiness endpoints
 
 ## Goal
 
-Add explicit run event history, event repository boundaries, service-level event recording, and a timeline API endpoint.
+Add deterministic verification reports, verification repository boundaries, service-level verification generation, and API endpoints to verify runs and fetch the latest report.
 
 ## Exit criteria
 
-- [ ] event contracts exist
-- [ ] event query and page contracts exist
-- [ ] event repository abstraction exists
-- [ ] in-memory event repository exists
-- [ ] run service records events for run creation and mutation actions
-- [ ] timeline endpoint exists
-- [ ] API, service, and storage tests cover event history
+- [ ] verification contracts exist
+- [ ] verification repository abstraction exists
+- [ ] in-memory verification repository exists
+- [ ] deterministic verification builder exists
+- [ ] run service can verify a run and fetch the latest report
+- [ ] verification event is recorded
+- [ ] verify and latest verification endpoints exist
+- [ ] API, service, and storage tests cover verification behavior
 - [ ] `make check` passes
 - [ ] human review is complete
 - [ ] commit is created

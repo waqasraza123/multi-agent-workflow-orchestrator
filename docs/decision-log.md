@@ -33,13 +33,13 @@
 - FastAPI for the initial HTTP application surface
 - Uvicorn for local ASGI serving
 
-## Event history decision
+## Verification decision
 
-- Run history is modeled as explicit event records
-- Events are stored behind a dedicated repository abstraction
-- Application services record events after successful state changes
-- Event listing uses a pagination-ready query model
-- Timeline retrieval is a first-class API surface
+- Run verification is modeled as an explicit report
+- Verification is deterministic at this stage
+- Verification reports are stored behind a dedicated repository abstraction
+- Application services own verification generation and persistence
+- Verification completion is also recorded in the run event timeline
 
 ## Still intentionally undecided
 

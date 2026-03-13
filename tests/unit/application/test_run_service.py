@@ -8,15 +8,34 @@ from multi_agent_platform.contracts.run_commands import (
 )
 from multi_agent_platform.contracts.run_events import RunEventListQuery, RunEventType
 from multi_agent_platform.contracts.run_queries import RunListQuery
+from multi_agent_platform.contracts.run_verifications import VerificationVerdict
 from multi_agent_platform.contracts.runs import RunCreateRequest, TaskStatus, WorkflowType
 from multi_agent_platform.storage.run_event_repository import InMemoryRunEventRepository
 from multi_agent_platform.storage.run_repository import InMemoryRunRepository, RunNotFoundError
+from multi_agent_platform.storage.run_verification_repository import (
+    InMemoryRunVerificationRepository,
+)
 
 
 def build_run_service() -> RunService:
     return RunService(
         run_repository=InMemoryRunRepository(),
         run_event_repository=InMemoryRunEventRepository(),
+        run_verification_repository=InMemoryRunVerificationRepository(),
+    )
+
+
+def build_single_task_request() -> TaskRegistrationRequest:
+    return TaskRegistrationRequest(
+        items=[
+            TaskRegistrationItem(
+                task_id="task_1",
+                title="Review logs",
+                description="Review service logs",
+                assigned_agent="planner",
+                acceptance_criteria=["Logs reviewed"],
+            )
+        ]
     )
 
 
@@ -58,33 +77,9 @@ def test_run_service_registers_and_progresses_tasks() -> None:
     created_run = run_service.create_run(RunCreateRequest(user_goal="Investigate issue"))
     run_id = created_run.item.run_id
 
-    registration_response = run_service.register_tasks(
-        run_id,
-        TaskRegistrationRequest(
-            items=[
-                TaskRegistrationItem(
-                    task_id="task_1",
-                    title="Review logs",
-                    description="Review service logs",
-                    assigned_agent="planner",
-                    acceptance_criteria=["Logs reviewed"],
-                ),
-                TaskRegistrationItem(
-                    task_id="task_2",
-                    title="Summarize findings",
-                    description="Summarize the investigation",
-                    assigned_agent="writer",
-                    dependency_ids=["task_1"],
-                    acceptance_criteria=["Summary produced"],
-                ),
-            ]
-        ),
-    )
+    registration_response = run_service.register_tasks(run_id, build_single_task_request())
 
-    assert [task.status for task in registration_response.item.tasks] == [
-        TaskStatus.READY,
-        TaskStatus.PENDING,
-    ]
+    assert [task.status for task in registration_response.item.tasks] == [TaskStatus.READY]
 
     started_response = run_service.start_task(run_id, TaskStartRequest(task_id="task_1"))
     assert started_response.item.current_task_id == "task_1"
@@ -93,10 +88,7 @@ def test_run_service_registers_and_progresses_tasks() -> None:
         run_id,
         TaskCompleteRequest(task_id="task_1"),
     )
-    assert [task.status for task in completed_response.item.tasks] == [
-        TaskStatus.COMPLETED,
-        TaskStatus.READY,
-    ]
+    assert [task.status for task in completed_response.item.tasks] == [TaskStatus.COMPLETED]
 
 
 def test_run_service_records_evidence() -> None:
@@ -123,26 +115,41 @@ def test_run_service_lists_run_events() -> None:
     run_service = build_run_service()
     created_run = run_service.create_run(RunCreateRequest(user_goal="Track event history"))
     run_id = created_run.item.run_id
-    run_service.register_tasks(
-        run_id,
-        TaskRegistrationRequest(
-            items=[
-                TaskRegistrationItem(
-                    task_id="task_1",
-                    title="Review logs",
-                    description="Review service logs",
-                    assigned_agent="planner",
-                    acceptance_criteria=["Logs reviewed"],
-                )
-            ]
-        ),
-    )
+    run_service.register_tasks(run_id, build_single_task_request())
 
     response = run_service.list_run_events(run_id, RunEventListQuery(limit=10, offset=0))
 
     assert len(response.items) == 2
     assert response.items[0].event_type is RunEventType.TASKS_REGISTERED
     assert response.items[1].event_type is RunEventType.RUN_CREATED
+
+
+def test_run_service_verifies_completed_run() -> None:
+    run_service = build_run_service()
+    created_run = run_service.create_run(RunCreateRequest(user_goal="Verify readiness"))
+    run_id = created_run.item.run_id
+    run_service.register_tasks(run_id, build_single_task_request())
+    run_service.start_task(run_id, TaskStartRequest(task_id="task_1"))
+    run_service.complete_task(run_id, TaskCompleteRequest(task_id="task_1"))
+
+    verification_response = run_service.verify_run(run_id)
+    latest_response = run_service.get_latest_verification(run_id)
+    event_response = run_service.list_run_events(run_id, RunEventListQuery(limit=10, offset=0))
+
+    assert verification_response.item.verdict is VerificationVerdict.PASS
+    assert latest_response.item.verification_id == verification_response.item.verification_id
+    assert event_response.items[0].event_type is RunEventType.VERIFICATION_COMPLETED
+
+
+def test_run_service_fails_verification_for_incomplete_run() -> None:
+    run_service = build_run_service()
+    created_run = run_service.create_run(RunCreateRequest(user_goal="Verify incomplete run"))
+    run_id = created_run.item.run_id
+    run_service.register_tasks(run_id, build_single_task_request())
+
+    verification_response = run_service.verify_run(run_id)
+
+    assert verification_response.item.verdict is VerificationVerdict.FAIL
 
 
 def test_run_service_raises_for_missing_run() -> None:

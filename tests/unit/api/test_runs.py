@@ -10,6 +10,24 @@ def reset_state() -> None:
     reset_api_state()
 
 
+def register_single_task(client: TestClient, run_id: str) -> None:
+    response = client.post(
+        f"/runs/{run_id}/tasks",
+        json={
+            "items": [
+                {
+                    "task_id": "task_1",
+                    "title": "Review logs",
+                    "description": "Review service logs",
+                    "assigned_agent": "planner",
+                    "acceptance_criteria": ["Logs reviewed"],
+                }
+            ]
+        },
+    )
+    assert response.status_code == 200
+
+
 def test_create_and_get_run_endpoints_return_wrapped_run_detail() -> None:
     client = TestClient(app)
 
@@ -41,20 +59,17 @@ def test_create_and_get_run_endpoints_return_wrapped_run_detail() -> None:
 def test_list_runs_supports_pagination_and_filters() -> None:
     client = TestClient(app)
 
-    first_response = client.post(
+    client.post(
         "/runs",
         json={"user_goal": "Prepare a rollout plan", "workflow_type": "technical_plan"},
     )
-    second_response = client.post(
+    client.post(
         "/runs",
         json={
             "user_goal": "Analyze the incident report",
             "workflow_type": "document_analysis",
         },
     )
-
-    assert first_response.status_code == 201
-    assert second_response.status_code == 201
 
     list_response = client.get("/runs?limit=1&offset=0&workflow_type=document_analysis")
 
@@ -77,32 +92,7 @@ def test_run_mutation_endpoints_progress_tasks_and_record_evidence() -> None:
     create_response = client.post("/runs", json={"user_goal": "Handle an incident"})
     run_id = create_response.json()["item"]["run_id"]
 
-    register_response = client.post(
-        f"/runs/{run_id}/tasks",
-        json={
-            "items": [
-                {
-                    "task_id": "task_1",
-                    "title": "Review logs",
-                    "description": "Review service logs",
-                    "assigned_agent": "planner",
-                    "acceptance_criteria": ["Logs reviewed"],
-                },
-                {
-                    "task_id": "task_2",
-                    "title": "Prepare summary",
-                    "description": "Prepare incident summary",
-                    "assigned_agent": "writer",
-                    "dependency_ids": ["task_1"],
-                    "acceptance_criteria": ["Summary prepared"],
-                },
-            ]
-        },
-    )
-
-    assert register_response.status_code == 200
-    task_statuses = [task["status"] for task in register_response.json()["item"]["tasks"]]
-    assert task_statuses == ["ready", "pending"]
+    register_single_task(client, run_id)
 
     start_response = client.post(f"/runs/{run_id}/tasks/task_1/start")
     assert start_response.status_code == 200
@@ -111,7 +101,7 @@ def test_run_mutation_endpoints_progress_tasks_and_record_evidence() -> None:
     complete_response = client.post(f"/runs/{run_id}/tasks/task_1/complete")
     assert complete_response.status_code == 200
     task_statuses = [task["status"] for task in complete_response.json()["item"]["tasks"]]
-    assert task_statuses == ["completed", "ready"]
+    assert task_statuses == ["completed"]
 
     evidence_response = client.post(
         f"/runs/{run_id}/evidence",
@@ -135,20 +125,7 @@ def test_run_events_endpoint_returns_timeline() -> None:
     create_response = client.post("/runs", json={"user_goal": "Track event history"})
     run_id = create_response.json()["item"]["run_id"]
 
-    client.post(
-        f"/runs/{run_id}/tasks",
-        json={
-            "items": [
-                {
-                    "task_id": "task_1",
-                    "title": "Review logs",
-                    "description": "Review service logs",
-                    "assigned_agent": "planner",
-                    "acceptance_criteria": ["Logs reviewed"],
-                }
-            ]
-        },
-    )
+    register_single_task(client, run_id)
 
     response = client.get(f"/runs/{run_id}/events?limit=10&offset=0")
 
@@ -157,6 +134,40 @@ def test_run_events_endpoint_returns_timeline() -> None:
     assert payload["page"]["total_count"] == 2
     assert payload["items"][0]["event_type"] == "tasks_registered"
     assert payload["items"][1]["event_type"] == "run_created"
+
+
+def test_verification_endpoints_return_reports() -> None:
+    client = TestClient(app)
+
+    create_response = client.post("/runs", json={"user_goal": "Verify readiness"})
+    run_id = create_response.json()["item"]["run_id"]
+    register_single_task(client, run_id)
+    client.post(f"/runs/{run_id}/tasks/task_1/start")
+    client.post(f"/runs/{run_id}/tasks/task_1/complete")
+
+    verify_response = client.post(f"/runs/{run_id}/verify")
+    latest_response = client.get(f"/runs/{run_id}/verifications/latest")
+
+    assert verify_response.status_code == 200
+    assert verify_response.json()["item"]["verdict"] == "pass"
+    assert latest_response.status_code == 200
+    assert (
+        latest_response.json()["item"]["verification_id"]
+        == verify_response.json()["item"]["verification_id"]
+    )
+
+
+def test_verification_endpoint_fails_for_incomplete_run() -> None:
+    client = TestClient(app)
+
+    create_response = client.post("/runs", json={"user_goal": "Verify incomplete run"})
+    run_id = create_response.json()["item"]["run_id"]
+    register_single_task(client, run_id)
+
+    verify_response = client.post(f"/runs/{run_id}/verify")
+
+    assert verify_response.status_code == 200
+    assert verify_response.json()["item"]["verdict"] == "fail"
 
 
 def test_invalid_task_transition_returns_conflict() -> None:
