@@ -33,13 +33,13 @@
 - FastAPI for the initial HTTP application surface
 - Uvicorn for local ASGI serving
 
-## Approval workflow decision
+## Planning decision
 
-- Approval requests are modeled as explicit records
-- Approval records are stored behind a dedicated repository abstraction
-- Application services own approval creation and decision handling
-- Approval decisions are immutable after the first non-pending decision
-- Approval actions are recorded in the run event timeline
+- Planning is modeled as an explicit report plus generated task graph
+- Planning is deterministic at this stage
+- Workflow type selects a planning template
+- Generated tasks are registered through the same orchestration state transition path as manual task registration
+- Planning completion is recorded in the run event timeline
 
 ## Still intentionally undecided
 

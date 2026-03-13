@@ -10,10 +10,11 @@ This keeps the codebase modular without introducing premature multi-package pack
 
 ## Domain boundaries
 
-- `multi_agent_platform.contracts` - Typed request, query, response, state, entity, command, event, verification, and approval models
+- `multi_agent_platform.contracts` - Typed request, query, response, state, entity, command, event, verification, approval, and planning models
 - `multi_agent_platform.application` - Use-case orchestration across repositories and domain logic
 - `multi_agent_platform.api` - HTTP routing, dependency wiring, and response shaping
 - `multi_agent_platform.orchestration` - Deterministic workflow state transitions
+- `multi_agent_platform.planning` - Deterministic workflow planning templates and task graph generation
 - `multi_agent_platform.storage` - Repository interfaces and implementations
 - `multi_agent_platform.agents` - Agent role logic
 - `multi_agent_platform.tools` - Tool interfaces and adapters
@@ -22,4 +23,4 @@ This keeps the codebase modular without introducing premature multi-package pack
 
 ## Current implementation boundary
 
-The repository includes a runnable FastAPI app with application services, in-memory repositories for runs, events, verifications, and approvals, deterministic workflow state transitions, and explicit audit, verification, and approval surfaces.
+The repository includes a runnable FastAPI app with application services, in-memory repositories for runs, events, verifications, approvals, and plans, deterministic workflow state transitions, explicit audit and review surfaces, and deterministic plan generation based on workflow type.

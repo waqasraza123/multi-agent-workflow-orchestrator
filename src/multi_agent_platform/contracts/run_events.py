@@ -17,6 +17,7 @@ class RunEventType(StrEnum):
     VERIFICATION_COMPLETED = "verification_completed"
     APPROVAL_REQUESTED = "approval_requested"
     APPROVAL_DECIDED = "approval_decided"
+    PLAN_GENERATED = "plan_generated"
 
 
 class RunEventRecord(BaseModel):

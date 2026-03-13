@@ -2,21 +2,22 @@
 
 ## Current step
 
-Step 13 - Approval requests, decisions, and review endpoints
+Step 14 - Deterministic planning templates and planning endpoints
 
 ## Goal
 
-Add explicit approval records, approval repository boundaries, service-level approval request and decision handling, and API endpoints to review and decide approvals.
+Add deterministic planning templates, planning report models, service-level planning generation, and API endpoints to generate and fetch the latest plan for a run.
 
 ## Exit criteria
 
-- [ ] approval contracts exist
-- [ ] approval repository abstraction exists
-- [ ] in-memory approval repository exists
-- [ ] run service can create approvals, list approvals, and decide approvals
-- [ ] approval events are recorded
-- [ ] approval endpoints exist
-- [ ] API, service, and storage tests cover approval behavior
+- [ ] planning contracts exist
+- [ ] planning repository abstraction exists
+- [ ] in-memory planning repository exists
+- [ ] deterministic planner exists
+- [ ] run service can generate a plan and fetch the latest plan
+- [ ] planning event is recorded
+- [ ] planning endpoints exist
+- [ ] API, service, storage, and planner tests cover planning behavior
 - [ ] `make check` passes
 - [ ] human review is complete
 - [ ] commit is created

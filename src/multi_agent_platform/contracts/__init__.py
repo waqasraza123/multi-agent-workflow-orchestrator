@@ -24,6 +24,8 @@ from multi_agent_platform.contracts.run_events import (
     RunEventRecord,
     RunEventType,
 )
+from multi_agent_platform.contracts.run_plan_views import RunPlanResponse
+from multi_agent_platform.contracts.run_plans import PlannedTask, RunPlanReport
 from multi_agent_platform.contracts.run_queries import PageInfo, RunListQuery, RunStatePage
 from multi_agent_platform.contracts.run_verification_views import RunVerificationResponse
 from multi_agent_platform.contracts.run_verifications import (
@@ -65,6 +67,7 @@ __all__ = [
     "EvidenceCreateRequest",
     "EvidenceRecord",
     "PageInfo",
+    "PlannedTask",
     "RiskLevel",
     "RunApprovalListResponse",
     "RunApprovalResponse",
@@ -78,6 +81,8 @@ __all__ = [
     "RunEventType",
     "RunListQuery",
     "RunListResponse",
+    "RunPlanReport",
+    "RunPlanResponse",
     "RunResponse",
     "RunStatePage",
     "RunStateResponse",
