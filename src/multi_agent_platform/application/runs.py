@@ -1,9 +1,25 @@
+from multi_agent_platform.application.run_approvals import (
+    build_run_approval_list_response,
+    build_run_approval_response,
+)
 from multi_agent_platform.application.run_events import build_run_event_list_response
 from multi_agent_platform.application.run_verifications import build_run_verification_report
 from multi_agent_platform.application.run_views import (
     build_run_list_response,
     build_run_response,
     build_run_state_response,
+)
+from multi_agent_platform.contracts.run_approvals import (
+    ApprovalDecision,
+    ApprovalDecisionRequest,
+    ApprovalListQuery,
+    ApprovalRequestCreate,
+    ApprovalStatus,
+    ApprovalRecord,
+)
+from multi_agent_platform.contracts.run_approval_views import (
+    RunApprovalListResponse,
+    RunApprovalResponse,
 )
 from multi_agent_platform.contracts.run_commands import (
     EvidenceCreateRequest,
@@ -29,11 +45,16 @@ from multi_agent_platform.orchestration.state import (
     register_tasks,
     start_task,
 )
+from multi_agent_platform.storage.run_approval_repository import RunApprovalRepository
 from multi_agent_platform.storage.run_event_repository import RunEventRepository
 from multi_agent_platform.storage.run_repository import RunRepository
 from multi_agent_platform.storage.run_verification_repository import (
     RunVerificationRepository,
 )
+
+
+class ApprovalTransitionError(ValueError):
+    pass
 
 
 class RunService:
@@ -42,10 +63,12 @@ class RunService:
         run_repository: RunRepository,
         run_event_repository: RunEventRepository,
         run_verification_repository: RunVerificationRepository,
+        run_approval_repository: RunApprovalRepository,
     ) -> None:
         self._run_repository = run_repository
         self._run_event_repository = run_event_repository
         self._run_verification_repository = run_verification_repository
+        self._run_approval_repository = run_approval_repository
 
     def create_run(self, request: RunCreateRequest) -> RunResponse:
         run_state = create_run_state(request)
@@ -80,6 +103,67 @@ class RunService:
         self._run_repository.get(run_id)
         run_event_page = self._run_event_repository.list(run_id, query)
         return build_run_event_list_response(run_event_page)
+
+    def request_approval(
+        self,
+        run_id: str,
+        request: ApprovalRequestCreate,
+    ) -> RunApprovalResponse:
+        self._run_repository.get(run_id)
+        approval_record = ApprovalRecord(
+            run_id=run_id,
+            requested_action=request.requested_action,
+            reason=request.reason,
+            risk_summary=request.risk_summary,
+            proposed_next_step=request.proposed_next_step,
+            supporting_evidence_refs=request.supporting_evidence_refs,
+        )
+        stored_record = self._run_approval_repository.create(approval_record)
+        self._record_event(
+            run_id=run_id,
+            event_type=RunEventType.APPROVAL_REQUESTED,
+            payload={"approval_id": stored_record.approval_id, "status": stored_record.status.value},
+        )
+        return build_run_approval_response(stored_record)
+
+    def decide_approval(
+        self,
+        run_id: str,
+        approval_id: str,
+        request: ApprovalDecisionRequest,
+    ) -> RunApprovalResponse:
+        self._run_repository.get(run_id)
+        approval_record = self._run_approval_repository.get(run_id, approval_id)
+        if approval_record.status is not ApprovalStatus.PENDING:
+            raise ApprovalTransitionError(f"Approval {approval_id} is no longer pending")
+        updated_record = approval_record.model_copy(
+            update={
+                "status": self._map_decision_to_status(request.decision),
+                "reviewer_id": request.reviewer_id,
+                "reviewer_note": request.reviewer_note,
+                "decided_at": approval_record.requested_at.__class__.now(approval_record.requested_at.tzinfo),
+            }
+        )
+        stored_record = self._run_approval_repository.update(updated_record)
+        self._record_event(
+            run_id=run_id,
+            event_type=RunEventType.APPROVAL_DECIDED,
+            payload={
+                "approval_id": stored_record.approval_id,
+                "decision": request.decision.value,
+                "status": stored_record.status.value,
+            },
+        )
+        return build_run_approval_response(stored_record)
+
+    def list_approvals(
+        self,
+        run_id: str,
+        query: ApprovalListQuery,
+    ) -> RunApprovalListResponse:
+        self._run_repository.get(run_id)
+        approval_page = self._run_approval_repository.list(run_id, query)
+        return build_run_approval_list_response(approval_page)
 
     def register_tasks(
         self,
@@ -172,5 +256,12 @@ class RunService:
             )
         )
 
+    def _map_decision_to_status(self, decision: ApprovalDecision) -> ApprovalStatus:
+        if decision is ApprovalDecision.APPROVE:
+            return ApprovalStatus.APPROVED
+        if decision is ApprovalDecision.REJECT:
+            return ApprovalStatus.REJECTED
+        return ApprovalStatus.REVISION_REQUESTED
 
-__all__ = ["RunService", "StateTransitionError"]
+
+__all__ = ["ApprovalTransitionError", "RunService", "StateTransitionError"]

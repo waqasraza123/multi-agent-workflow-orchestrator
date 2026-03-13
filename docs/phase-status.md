@@ -2,22 +2,21 @@
 
 ## Current step
 
-Step 12 - Deterministic verification reports and readiness endpoints
+Step 13 - Approval requests, decisions, and review endpoints
 
 ## Goal
 
-Add deterministic verification reports, verification repository boundaries, service-level verification generation, and API endpoints to verify runs and fetch the latest report.
+Add explicit approval records, approval repository boundaries, service-level approval request and decision handling, and API endpoints to review and decide approvals.
 
 ## Exit criteria
 
-- [ ] verification contracts exist
-- [ ] verification repository abstraction exists
-- [ ] in-memory verification repository exists
-- [ ] deterministic verification builder exists
-- [ ] run service can verify a run and fetch the latest report
-- [ ] verification event is recorded
-- [ ] verify and latest verification endpoints exist
-- [ ] API, service, and storage tests cover verification behavior
+- [ ] approval contracts exist
+- [ ] approval repository abstraction exists
+- [ ] in-memory approval repository exists
+- [ ] run service can create approvals, list approvals, and decide approvals
+- [ ] approval events are recorded
+- [ ] approval endpoints exist
+- [ ] API, service, and storage tests cover approval behavior
 - [ ] `make check` passes
 - [ ] human review is complete
 - [ ] commit is created

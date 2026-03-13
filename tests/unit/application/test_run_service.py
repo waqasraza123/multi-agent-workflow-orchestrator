@@ -1,4 +1,15 @@
-from multi_agent_platform.application.runs import RunService, StateTransitionError
+from multi_agent_platform.application.runs import (
+    ApprovalTransitionError,
+    RunService,
+    StateTransitionError,
+)
+from multi_agent_platform.contracts.run_approvals import (
+    ApprovalDecision,
+    ApprovalDecisionRequest,
+    ApprovalListQuery,
+    ApprovalRequestCreate,
+    ApprovalStatus,
+)
 from multi_agent_platform.contracts.run_commands import (
     EvidenceCreateRequest,
     TaskCompleteRequest,
@@ -10,6 +21,7 @@ from multi_agent_platform.contracts.run_events import RunEventListQuery, RunEven
 from multi_agent_platform.contracts.run_queries import RunListQuery
 from multi_agent_platform.contracts.run_verifications import VerificationVerdict
 from multi_agent_platform.contracts.runs import RunCreateRequest, TaskStatus, WorkflowType
+from multi_agent_platform.storage.run_approval_repository import InMemoryRunApprovalRepository
 from multi_agent_platform.storage.run_event_repository import InMemoryRunEventRepository
 from multi_agent_platform.storage.run_repository import InMemoryRunRepository, RunNotFoundError
 from multi_agent_platform.storage.run_verification_repository import (
@@ -22,6 +34,7 @@ def build_run_service() -> RunService:
         run_repository=InMemoryRunRepository(),
         run_event_repository=InMemoryRunEventRepository(),
         run_verification_repository=InMemoryRunVerificationRepository(),
+        run_approval_repository=InMemoryRunApprovalRepository(),
     )
 
 
@@ -124,6 +137,42 @@ def test_run_service_lists_run_events() -> None:
     assert response.items[1].event_type is RunEventType.RUN_CREATED
 
 
+def test_run_service_requests_and_decides_approval() -> None:
+    run_service = build_run_service()
+    created_run = run_service.create_run(RunCreateRequest(user_goal="Request approval"))
+    run_id = created_run.item.run_id
+
+    approval_response = run_service.request_approval(
+        run_id,
+        ApprovalRequestCreate(
+            requested_action="Send deployment notice",
+            reason="External communication is required",
+            risk_summary="Incorrect message could confuse users",
+            proposed_next_step="Wait for approver response",
+        ),
+    )
+    decision_response = run_service.decide_approval(
+        run_id,
+        approval_response.item.approval_id,
+        ApprovalDecisionRequest(
+            decision=ApprovalDecision.APPROVE,
+            reviewer_id="reviewer_1",
+            reviewer_note="Approved for release",
+        ),
+    )
+    approval_list = run_service.list_approvals(
+        run_id,
+        ApprovalListQuery(limit=10, offset=0, status=ApprovalStatus.APPROVED),
+    )
+    event_response = run_service.list_run_events(run_id, RunEventListQuery(limit=10, offset=0))
+
+    assert approval_response.item.status is ApprovalStatus.PENDING
+    assert decision_response.item.status is ApprovalStatus.APPROVED
+    assert len(approval_list.items) == 1
+    assert approval_list.items[0].approval_id == approval_response.item.approval_id
+    assert event_response.items[0].event_type is RunEventType.APPROVAL_DECIDED
+
+
 def test_run_service_verifies_completed_run() -> None:
     run_service = build_run_service()
     created_run = run_service.create_run(RunCreateRequest(user_goal="Verify readiness"))
@@ -173,3 +222,39 @@ def test_run_service_raises_for_invalid_transition() -> None:
         return
 
     raise AssertionError("Expected StateTransitionError for an invalid task start")
+
+
+def test_run_service_rejects_deciding_non_pending_approval() -> None:
+    run_service = build_run_service()
+    created_run = run_service.create_run(RunCreateRequest(user_goal="Approval transition check"))
+    run_id = created_run.item.run_id
+    approval_response = run_service.request_approval(
+        run_id,
+        ApprovalRequestCreate(
+            requested_action="Publish summary",
+            reason="Public communication is required",
+            risk_summary="Incorrect summary could mislead users",
+        ),
+    )
+    run_service.decide_approval(
+        run_id,
+        approval_response.item.approval_id,
+        ApprovalDecisionRequest(
+            decision=ApprovalDecision.REJECT,
+            reviewer_id="reviewer_1",
+        ),
+    )
+
+    try:
+        run_service.decide_approval(
+            run_id,
+            approval_response.item.approval_id,
+            ApprovalDecisionRequest(
+                decision=ApprovalDecision.APPROVE,
+                reviewer_id="reviewer_2",
+            ),
+        )
+    except ApprovalTransitionError:
+        return
+
+    raise AssertionError("Expected ApprovalTransitionError for a non-pending approval")

@@ -3,7 +3,21 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status as http_status
 
 from multi_agent_platform.api.dependencies import get_run_service
-from multi_agent_platform.application.runs import RunService, StateTransitionError
+from multi_agent_platform.application.runs import (
+    ApprovalTransitionError,
+    RunService,
+    StateTransitionError,
+)
+from multi_agent_platform.contracts.run_approvals import (
+    ApprovalDecisionRequest,
+    ApprovalListQuery,
+    ApprovalRequestCreate,
+    ApprovalStatus,
+)
+from multi_agent_platform.contracts.run_approval_views import (
+    RunApprovalListResponse,
+    RunApprovalResponse,
+)
 from multi_agent_platform.contracts.run_commands import (
     EvidenceCreateRequest,
     TaskCompleteRequest,
@@ -16,6 +30,7 @@ from multi_agent_platform.contracts.run_queries import RunListQuery
 from multi_agent_platform.contracts.run_verification_views import RunVerificationResponse
 from multi_agent_platform.contracts.run_views import RunListResponse, RunResponse, RunStateResponse
 from multi_agent_platform.contracts.runs import RunCreateRequest, RunStatus, WorkflowType
+from multi_agent_platform.storage.run_approval_repository import RunApprovalNotFoundError
 from multi_agent_platform.storage.run_repository import RunNotFoundError
 from multi_agent_platform.storage.run_verification_repository import (
     RunVerificationNotFoundError,
@@ -27,6 +42,7 @@ LimitQuery = Annotated[int, Query(ge=1, le=100)]
 OffsetQuery = Annotated[int, Query(ge=0)]
 StatusQuery = Annotated[RunStatus | None, Query()]
 WorkflowTypeQuery = Annotated[WorkflowType | None, Query()]
+ApprovalStatusQuery = Annotated[ApprovalStatus | None, Query()]
 
 
 def build_run_list_query(
@@ -50,15 +66,28 @@ def build_run_event_list_query(
     return RunEventListQuery(limit=limit, offset=offset)
 
 
+def build_approval_list_query(
+    limit: LimitQuery = 20,
+    offset: OffsetQuery = 0,
+    status_filter: ApprovalStatusQuery = None,
+) -> ApprovalListQuery:
+    return ApprovalListQuery(limit=limit, offset=offset, status=status_filter)
+
+
 RunListQueryDependency = Annotated[RunListQuery, Depends(build_run_list_query)]
 RunEventListQueryDependency = Annotated[RunEventListQuery, Depends(build_run_event_list_query)]
+ApprovalListQueryDependency = Annotated[ApprovalListQuery, Depends(build_approval_list_query)]
 
 
 def map_run_error(error: Exception) -> HTTPException:
     if isinstance(error, RunNotFoundError):
         return HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(error))
+    if isinstance(error, RunApprovalNotFoundError):
+        return HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(error))
     if isinstance(error, RunVerificationNotFoundError):
         return HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(error))
+    if isinstance(error, ApprovalTransitionError):
+        return HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail=str(error))
     if isinstance(error, StateTransitionError):
         return HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail=str(error))
     raise HTTPException(
@@ -113,6 +142,43 @@ def list_run_events(
 ) -> RunEventListResponse:
     try:
         return run_service.list_run_events(run_id, query)
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
+@router.get("/{run_id}/approvals", response_model=RunApprovalListResponse)
+def list_run_approvals(
+    run_id: str,
+    query: ApprovalListQueryDependency,
+    run_service: RunServiceDependency,
+) -> RunApprovalListResponse:
+    try:
+        return run_service.list_approvals(run_id, query)
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
+@router.post("/{run_id}/approvals", response_model=RunApprovalResponse)
+def create_run_approval(
+    run_id: str,
+    request: ApprovalRequestCreate,
+    run_service: RunServiceDependency,
+) -> RunApprovalResponse:
+    try:
+        return run_service.request_approval(run_id, request)
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
+@router.post("/{run_id}/approvals/{approval_id}/decide", response_model=RunApprovalResponse)
+def decide_run_approval(
+    run_id: str,
+    approval_id: str,
+    request: ApprovalDecisionRequest,
+    run_service: RunServiceDependency,
+) -> RunApprovalResponse:
+    try:
+        return run_service.decide_approval(run_id, approval_id, request)
     except Exception as error:
         raise map_run_error(error) from error
 

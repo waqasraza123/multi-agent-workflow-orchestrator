@@ -15,6 +15,8 @@ class RunEventType(StrEnum):
     TASK_COMPLETED = "task_completed"
     EVIDENCE_RECORDED = "evidence_recorded"
     VERIFICATION_COMPLETED = "verification_completed"
+    APPROVAL_REQUESTED = "approval_requested"
+    APPROVAL_DECIDED = "approval_decided"
 
 
 class RunEventRecord(BaseModel):

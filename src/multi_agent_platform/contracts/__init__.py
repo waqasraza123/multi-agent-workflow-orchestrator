@@ -1,3 +1,16 @@
+from multi_agent_platform.contracts.run_approvals import (
+    ApprovalDecision,
+    ApprovalDecisionRequest,
+    ApprovalListQuery,
+    ApprovalPage,
+    ApprovalRecord,
+    ApprovalRequestCreate,
+    ApprovalStatus,
+)
+from multi_agent_platform.contracts.run_approval_views import (
+    RunApprovalListResponse,
+    RunApprovalResponse,
+)
 from multi_agent_platform.contracts.run_commands import (
     EvidenceCreateRequest,
     TaskCompleteRequest,
@@ -40,12 +53,21 @@ from multi_agent_platform.contracts.runs import (
 )
 
 __all__ = [
+    "ApprovalDecision",
+    "ApprovalDecisionRequest",
+    "ApprovalListQuery",
     "ApprovalMode",
+    "ApprovalPage",
     "ApprovalPolicy",
+    "ApprovalRecord",
+    "ApprovalRequestCreate",
+    "ApprovalStatus",
     "EvidenceCreateRequest",
     "EvidenceRecord",
     "PageInfo",
     "RiskLevel",
+    "RunApprovalListResponse",
+    "RunApprovalResponse",
     "RunConstraints",
     "RunCreateRequest",
     "RunDetail",

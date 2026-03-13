@@ -136,6 +136,83 @@ def test_run_events_endpoint_returns_timeline() -> None:
     assert payload["items"][1]["event_type"] == "run_created"
 
 
+def test_approval_endpoints_create_list_and_decide_requests() -> None:
+    client = TestClient(app)
+
+    create_response = client.post("/runs", json={"user_goal": "Approval flow"})
+    run_id = create_response.json()["item"]["run_id"]
+
+    approval_response = client.post(
+        f"/runs/{run_id}/approvals",
+        json={
+            "requested_action": "Send deployment notice",
+            "reason": "External communication is required",
+            "risk_summary": "Incorrect message could confuse users",
+            "proposed_next_step": "Wait for reviewer response",
+        },
+    )
+
+    assert approval_response.status_code == 200
+    approval_id = approval_response.json()["item"]["approval_id"]
+    assert approval_response.json()["item"]["status"] == "pending"
+
+    list_response = client.get(f"/runs/{run_id}/approvals?limit=10&offset=0&status=pending")
+    assert list_response.status_code == 200
+    assert list_response.json()["page"]["total_count"] == 1
+    assert list_response.json()["items"][0]["approval_id"] == approval_id
+
+    decision_response = client.post(
+        f"/runs/{run_id}/approvals/{approval_id}/decide",
+        json={
+            "decision": "approve",
+            "reviewer_id": "reviewer_1",
+            "reviewer_note": "Approved for action",
+        },
+    )
+
+    assert decision_response.status_code == 200
+    assert decision_response.json()["item"]["status"] == "approved"
+
+    event_response = client.get(f"/runs/{run_id}/events?limit=10&offset=0")
+    assert event_response.status_code == 200
+    assert event_response.json()["items"][0]["event_type"] == "approval_decided"
+
+
+def test_redeciding_approval_returns_conflict() -> None:
+    client = TestClient(app)
+
+    create_response = client.post("/runs", json={"user_goal": "Approval conflict"})
+    run_id = create_response.json()["item"]["run_id"]
+
+    approval_response = client.post(
+        f"/runs/{run_id}/approvals",
+        json={
+            "requested_action": "Publish summary",
+            "reason": "Public statement is required",
+            "risk_summary": "Incorrect summary could mislead users",
+        },
+    )
+    approval_id = approval_response.json()["item"]["approval_id"]
+
+    first_decision = client.post(
+        f"/runs/{run_id}/approvals/{approval_id}/decide",
+        json={
+            "decision": "reject",
+            "reviewer_id": "reviewer_1",
+        },
+    )
+    second_decision = client.post(
+        f"/runs/{run_id}/approvals/{approval_id}/decide",
+        json={
+            "decision": "approve",
+            "reviewer_id": "reviewer_2",
+        },
+    )
+
+    assert first_decision.status_code == 200
+    assert second_decision.status_code == 409
+
+
 def test_verification_endpoints_return_reports() -> None:
     client = TestClient(app)
 
@@ -151,10 +228,7 @@ def test_verification_endpoints_return_reports() -> None:
     assert verify_response.status_code == 200
     assert verify_response.json()["item"]["verdict"] == "pass"
     assert latest_response.status_code == 200
-    assert (
-        latest_response.json()["item"]["verification_id"]
-        == verify_response.json()["item"]["verification_id"]
-    )
+    assert latest_response.json()["item"]["verification_id"] == verify_response.json()["item"]["verification_id"]
 
 
 def test_verification_endpoint_fails_for_incomplete_run() -> None:

@@ -33,13 +33,13 @@
 - FastAPI for the initial HTTP application surface
 - Uvicorn for local ASGI serving
 
-## Verification decision
+## Approval workflow decision
 
-- Run verification is modeled as an explicit report
-- Verification is deterministic at this stage
-- Verification reports are stored behind a dedicated repository abstraction
-- Application services own verification generation and persistence
-- Verification completion is also recorded in the run event timeline
+- Approval requests are modeled as explicit records
+- Approval records are stored behind a dedicated repository abstraction
+- Application services own approval creation and decision handling
+- Approval decisions are immutable after the first non-pending decision
+- Approval actions are recorded in the run event timeline
 
 ## Still intentionally undecided
 

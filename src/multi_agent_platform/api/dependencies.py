@@ -1,4 +1,5 @@
 from multi_agent_platform.application.runs import RunService
+from multi_agent_platform.storage.run_approval_repository import InMemoryRunApprovalRepository
 from multi_agent_platform.storage.run_event_repository import InMemoryRunEventRepository
 from multi_agent_platform.storage.run_repository import InMemoryRunRepository
 from multi_agent_platform.storage.run_verification_repository import (
@@ -15,6 +16,7 @@ def get_run_service() -> RunService:
             run_repository=InMemoryRunRepository(),
             run_event_repository=InMemoryRunEventRepository(),
             run_verification_repository=InMemoryRunVerificationRepository(),
+            run_approval_repository=InMemoryRunApprovalRepository(),
         )
     return _run_service
 
