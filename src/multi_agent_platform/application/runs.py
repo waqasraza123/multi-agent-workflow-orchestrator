@@ -9,17 +9,17 @@ from multi_agent_platform.application.run_views import (
     build_run_response,
     build_run_state_response,
 )
+from multi_agent_platform.contracts.run_approval_views import (
+    RunApprovalListResponse,
+    RunApprovalResponse,
+)
 from multi_agent_platform.contracts.run_approvals import (
     ApprovalDecision,
     ApprovalDecisionRequest,
     ApprovalListQuery,
+    ApprovalRecord,
     ApprovalRequestCreate,
     ApprovalStatus,
-    ApprovalRecord,
-)
-from multi_agent_platform.contracts.run_approval_views import (
-    RunApprovalListResponse,
-    RunApprovalResponse,
 )
 from multi_agent_platform.contracts.run_commands import (
     EvidenceCreateRequest,
@@ -122,7 +122,10 @@ class RunService:
         self._record_event(
             run_id=run_id,
             event_type=RunEventType.APPROVAL_REQUESTED,
-            payload={"approval_id": stored_record.approval_id, "status": stored_record.status.value},
+            payload={
+                "approval_id": stored_record.approval_id,
+                "status": stored_record.status.value,
+            },
         )
         return build_run_approval_response(stored_record)
 
@@ -141,7 +144,9 @@ class RunService:
                 "status": self._map_decision_to_status(request.decision),
                 "reviewer_id": request.reviewer_id,
                 "reviewer_note": request.reviewer_note,
-                "decided_at": approval_record.requested_at.__class__.now(approval_record.requested_at.tzinfo),
+                "decided_at": approval_record.requested_at.__class__.now(
+                    approval_record.requested_at.tzinfo
+                ),
             }
         )
         stored_record = self._run_approval_repository.update(updated_record)

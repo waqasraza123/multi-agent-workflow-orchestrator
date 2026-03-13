@@ -1,6 +1,7 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status as http_status
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import status as http_status
 
 from multi_agent_platform.api.dependencies import get_run_service
 from multi_agent_platform.application.runs import (
@@ -8,15 +9,15 @@ from multi_agent_platform.application.runs import (
     RunService,
     StateTransitionError,
 )
+from multi_agent_platform.contracts.run_approval_views import (
+    RunApprovalListResponse,
+    RunApprovalResponse,
+)
 from multi_agent_platform.contracts.run_approvals import (
     ApprovalDecisionRequest,
     ApprovalListQuery,
     ApprovalRequestCreate,
     ApprovalStatus,
-)
-from multi_agent_platform.contracts.run_approval_views import (
-    RunApprovalListResponse,
-    RunApprovalResponse,
 )
 from multi_agent_platform.contracts.run_commands import (
     EvidenceCreateRequest,

@@ -1,5 +1,4 @@
 from multi_agent_platform.contracts.run_approvals import (
-    ApprovalDecision,
     ApprovalListQuery,
     ApprovalRecord,
     ApprovalStatus,
@@ -31,7 +30,9 @@ def test_approval_repository_creates_and_lists_records() -> None:
         )
     )
 
-    page = repository.list("run_1", ApprovalListQuery(limit=10, offset=0, status=ApprovalStatus.PENDING))
+    page = repository.list(
+        "run_1", ApprovalListQuery(limit=10, offset=0, status=ApprovalStatus.PENDING)
+    )
 
     assert len(page.items) == 1
     assert page.items[0].status is ApprovalStatus.PENDING

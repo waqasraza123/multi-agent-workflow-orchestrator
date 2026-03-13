@@ -1,6 +1,10 @@
 from typing import Protocol
 
-from multi_agent_platform.contracts.run_approvals import ApprovalListQuery, ApprovalPage, ApprovalRecord
+from multi_agent_platform.contracts.run_approvals import (
+    ApprovalListQuery,
+    ApprovalPage,
+    ApprovalRecord,
+)
 from multi_agent_platform.contracts.run_queries import PageInfo
 
 
@@ -32,7 +36,9 @@ class InMemoryRunApprovalRepository:
         run_records = self._records_by_run_id.get(approval_record.run_id, {})
         if approval_record.approval_id not in run_records:
             raise RunApprovalNotFoundError(
-                f"Approval {approval_record.approval_id} does not exist for run {approval_record.run_id}"
+                "Approval "
+                f"{approval_record.approval_id} does not exist for run "
+                f"{approval_record.run_id}"
             )
         stored_record = approval_record.model_copy(deep=True)
         run_records[stored_record.approval_id] = stored_record

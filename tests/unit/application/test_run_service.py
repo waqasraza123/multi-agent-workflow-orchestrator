@@ -13,8 +13,8 @@ from multi_agent_platform.contracts.run_approvals import (
 from multi_agent_platform.contracts.run_commands import (
     EvidenceCreateRequest,
     TaskCompleteRequest,
-    TaskRegistrationRequest,
     TaskRegistrationItem,
+    TaskRegistrationRequest,
     TaskStartRequest,
 )
 from multi_agent_platform.contracts.run_events import RunEventListQuery, RunEventType

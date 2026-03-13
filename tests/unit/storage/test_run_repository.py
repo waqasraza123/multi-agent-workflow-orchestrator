@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from multi_agent_platform.contracts.run_queries import RunListQuery
 from multi_agent_platform.contracts.runs import (
@@ -33,7 +33,7 @@ def test_repository_returns_saved_run() -> None:
     run_state = build_run_state(
         "run_1",
         "Inspect repository health",
-        created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        created_at=datetime(2026, 1, 1, tzinfo=UTC),
     )
 
     stored_run_state = repository.create(run_state)
@@ -50,21 +50,21 @@ def test_repository_lists_newest_runs_first_with_pagination() -> None:
         build_run_state(
             "run_older",
             "Older run",
-            created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            created_at=datetime(2026, 1, 1, tzinfo=UTC),
         )
     )
     repository.create(
         build_run_state(
             "run_newer",
             "Newer run",
-            created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+            created_at=datetime(2026, 1, 2, tzinfo=UTC),
         )
     )
     repository.create(
         build_run_state(
             "run_latest",
             "Latest run",
-            created_at=datetime(2026, 1, 3, tzinfo=timezone.utc),
+            created_at=datetime(2026, 1, 3, tzinfo=UTC),
         )
     )
 
@@ -84,7 +84,7 @@ def test_repository_filters_runs_by_status_and_workflow_type() -> None:
         build_run_state(
             "run_1",
             "Planning run",
-            created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            created_at=datetime(2026, 1, 1, tzinfo=UTC),
         )
     )
     repository.create(
@@ -93,7 +93,7 @@ def test_repository_filters_runs_by_status_and_workflow_type() -> None:
             "Completed document analysis",
             workflow_type=WorkflowType.DOCUMENT_ANALYSIS,
             status=RunStatus.COMPLETED,
-            created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+            created_at=datetime(2026, 1, 2, tzinfo=UTC),
         )
     )
 
@@ -117,7 +117,7 @@ def test_repository_update_replaces_existing_run() -> None:
         build_run_state(
             "run_1",
             "Updatable run",
-            created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            created_at=datetime(2026, 1, 1, tzinfo=UTC),
         )
     )
 
