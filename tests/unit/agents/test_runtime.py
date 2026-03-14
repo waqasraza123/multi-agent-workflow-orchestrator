@@ -3,7 +3,7 @@ from multi_agent_platform.contracts.runs import RunCreateRequest, TaskRecord
 from multi_agent_platform.orchestration.state import create_run_state
 
 
-def test_runtime_executes_deterministic_turn_and_records_evidence() -> None:
+def test_runtime_executes_deterministic_turn_and_plans_tool_call() -> None:
     run_state = create_run_state(
         RunCreateRequest(user_goal="Create a technical plan"),
         run_id="run_1",
@@ -21,5 +21,5 @@ def test_runtime_executes_deterministic_turn_and_records_evidence() -> None:
     assert result.summary == (
         "Planner reviewed the task scope for Review scope and prepared the next execution step."
     )
-    assert len(result.evidence_records) == 1
-    assert result.evidence_records[0].collected_by_agent == "planner"
+    assert len(result.planned_tool_calls) == 1
+    assert result.planned_tool_calls[0].tool_name == "goal_analyzer"

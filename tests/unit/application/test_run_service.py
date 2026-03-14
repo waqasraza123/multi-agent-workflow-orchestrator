@@ -21,6 +21,7 @@ from multi_agent_platform.contracts.run_commands import (
 )
 from multi_agent_platform.contracts.run_events import RunEventListQuery, RunEventType
 from multi_agent_platform.contracts.run_queries import RunListQuery
+from multi_agent_platform.contracts.run_tool_calls import RunToolCallListQuery
 from multi_agent_platform.contracts.run_turns import RunTurnListQuery
 from multi_agent_platform.contracts.run_verifications import VerificationVerdict
 from multi_agent_platform.contracts.runs import (
@@ -29,10 +30,18 @@ from multi_agent_platform.contracts.runs import (
     TaskStatus,
     WorkflowType,
 )
-from multi_agent_platform.storage.run_approval_repository import InMemoryRunApprovalRepository
+from multi_agent_platform.storage.run_approval_repository import (
+    InMemoryRunApprovalRepository,
+)
 from multi_agent_platform.storage.run_event_repository import InMemoryRunEventRepository
 from multi_agent_platform.storage.run_plan_repository import InMemoryRunPlanRepository
-from multi_agent_platform.storage.run_repository import InMemoryRunRepository, RunNotFoundError
+from multi_agent_platform.storage.run_repository import (
+    InMemoryRunRepository,
+    RunNotFoundError,
+)
+from multi_agent_platform.storage.run_tool_call_repository import (
+    InMemoryRunToolCallRepository,
+)
 from multi_agent_platform.storage.run_turn_repository import InMemoryRunTurnRepository
 from multi_agent_platform.storage.run_verification_repository import (
     InMemoryRunVerificationRepository,
@@ -47,6 +56,7 @@ def build_run_service() -> RunService:
         run_approval_repository=InMemoryRunApprovalRepository(),
         run_plan_repository=InMemoryRunPlanRepository(),
         run_turn_repository=InMemoryRunTurnRepository(),
+        run_tool_call_repository=InMemoryRunToolCallRepository(),
     )
 
 
@@ -110,7 +120,10 @@ def test_run_service_generates_plan_and_registers_tasks() -> None:
     plan_response = run_service.generate_plan(run_id)
     latest_plan = run_service.get_latest_plan(run_id)
     run_state = run_service.get_run_state(run_id)
-    event_response = run_service.list_run_events(run_id, RunEventListQuery(limit=10, offset=0))
+    event_response = run_service.list_run_events(
+        run_id,
+        RunEventListQuery(limit=10, offset=0),
+    )
 
     assert plan_response.item.plan_id == latest_plan.item.plan_id
     assert len(plan_response.item.tasks) == 3
@@ -134,14 +147,19 @@ def test_run_service_advances_planned_run_through_turns() -> None:
     second_turn = run_service.advance_turn(run_id)
     third_turn = run_service.advance_turn(run_id)
     turn_list = run_service.list_turns(run_id, RunTurnListQuery(limit=10, offset=0))
+    tool_calls = run_service.list_tool_calls(
+        run_id,
+        RunToolCallListQuery(limit=10, offset=0),
+    )
 
     assert first_turn.turn.agent_name == "planner"
-    assert len(first_turn.run_state.evidence) == 1
+    assert len(first_turn.turn.tool_call_ids) == 1
     assert second_turn.turn.agent_name == "researcher"
     assert third_turn.turn.agent_name == "writer"
     assert third_turn.run_state.status is RunStatus.VERIFYING
+    assert len(third_turn.run_state.evidence) == 3
     assert len(turn_list.items) == 3
-    assert turn_list.page.total_count == 3
+    assert tool_calls.page.total_count == 3
 
 
 def test_run_service_rejects_turn_advance_without_ready_task() -> None:

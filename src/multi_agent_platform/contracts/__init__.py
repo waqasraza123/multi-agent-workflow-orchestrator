@@ -27,6 +27,15 @@ from multi_agent_platform.contracts.run_events import (
 from multi_agent_platform.contracts.run_plan_views import RunPlanResponse
 from multi_agent_platform.contracts.run_plans import PlannedTask, RunPlanReport
 from multi_agent_platform.contracts.run_queries import PageInfo, RunListQuery, RunStatePage
+from multi_agent_platform.contracts.run_tool_call_views import (
+    RunToolCallListResponse,
+    RunToolCallResponse,
+)
+from multi_agent_platform.contracts.run_tool_calls import (
+    RunToolCallListQuery,
+    RunToolCallPage,
+    RunToolCallRecord,
+)
 from multi_agent_platform.contracts.run_turn_views import (
     RunTurnAdvanceResponse,
     RunTurnListResponse,
@@ -99,6 +108,11 @@ __all__ = [
     "RunStateSnapshot",
     "RunStatus",
     "RunSummary",
+    "RunToolCallListQuery",
+    "RunToolCallListResponse",
+    "RunToolCallPage",
+    "RunToolCallRecord",
+    "RunToolCallResponse",
     "RunTurnAdvanceResponse",
     "RunTurnListQuery",
     "RunTurnListResponse",

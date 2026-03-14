@@ -31,6 +31,7 @@ def test_foundation_files_exist() -> None:
         "src/multi_agent_platform/application/run_approvals.py",
         "src/multi_agent_platform/application/run_events.py",
         "src/multi_agent_platform/application/run_plans.py",
+        "src/multi_agent_platform/application/run_tool_calls.py",
         "src/multi_agent_platform/application/run_turns.py",
         "src/multi_agent_platform/application/run_verifications.py",
         "src/multi_agent_platform/application/run_views.py",
@@ -43,6 +44,8 @@ def test_foundation_files_exist() -> None:
         "src/multi_agent_platform/contracts/run_plan_views.py",
         "src/multi_agent_platform/contracts/run_plans.py",
         "src/multi_agent_platform/contracts/run_queries.py",
+        "src/multi_agent_platform/contracts/run_tool_call_views.py",
+        "src/multi_agent_platform/contracts/run_tool_calls.py",
         "src/multi_agent_platform/contracts/run_turn_views.py",
         "src/multi_agent_platform/contracts/run_turns.py",
         "src/multi_agent_platform/contracts/run_verification_views.py",
@@ -55,10 +58,14 @@ def test_foundation_files_exist() -> None:
         "src/multi_agent_platform/storage/run_event_repository.py",
         "src/multi_agent_platform/storage/run_plan_repository.py",
         "src/multi_agent_platform/storage/run_repository.py",
+        "src/multi_agent_platform/storage/run_tool_call_repository.py",
         "src/multi_agent_platform/storage/run_turn_repository.py",
         "src/multi_agent_platform/storage/run_verification_repository.py",
+        "src/multi_agent_platform/tools/__init__.py",
+        "src/multi_agent_platform/tools/registry.py",
         "tests/unit/agents/test_runtime.py",
-        "tests/unit/storage/test_run_turn_repository.py",
+        "tests/unit/storage/test_run_tool_call_repository.py",
+        "tests/unit/tools/test_registry.py",
     ]
     for relative_path in required_files:
         assert relative_path_exists(relative_path), f"Missing required file: {relative_path}"
@@ -83,6 +90,7 @@ def test_foundation_directories_exist() -> None:
         "src/multi_agent_platform/orchestration",
         "src/multi_agent_platform/planning",
         "src/multi_agent_platform/storage",
+        "src/multi_agent_platform/tools",
         "tests",
         "tests/unit",
         "tests/unit/agents",
@@ -91,6 +99,7 @@ def test_foundation_directories_exist() -> None:
         "tests/unit/contracts",
         "tests/unit/planning",
         "tests/unit/storage",
+        "tests/unit/tools",
     ]
     for relative_path in required_directories:
         assert (repo_root() / relative_path).is_dir(), (

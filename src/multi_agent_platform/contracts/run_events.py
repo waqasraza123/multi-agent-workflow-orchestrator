@@ -19,6 +19,7 @@ class RunEventType(StrEnum):
     APPROVAL_DECIDED = "approval_decided"
     PLAN_GENERATED = "plan_generated"
     TURN_EXECUTED = "turn_executed"
+    TOOL_EXECUTED = "tool_executed"
 
 
 class RunEventRecord(BaseModel):

@@ -1,14 +1,14 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from multi_agent_platform.contracts.common import generate_identifier
-from multi_agent_platform.contracts.runs import EvidenceRecord, RunStateSnapshot, TaskRecord
+from multi_agent_platform.contracts.runs import RunStateSnapshot, TaskRecord
+from multi_agent_platform.tools.registry import PlannedToolCall
 
 
 class TurnExecutionResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     summary: str
-    evidence_records: list[EvidenceRecord] = Field(default_factory=list)
+    planned_tool_calls: list[PlannedToolCall] = Field(default_factory=list)
 
 
 def execute_deterministic_turn(
@@ -16,15 +16,41 @@ def execute_deterministic_turn(
     task: TaskRecord,
 ) -> TurnExecutionResult:
     summary = build_turn_summary(task.assigned_agent, task.title)
-    evidence_record = EvidenceRecord(
-        evidence_id=generate_identifier("evidence"),
-        source_type="agent_turn",
-        source_ref=f"{run_state.run_id}:{task.task_id}:{task.assigned_agent}",
-        summary=f"{summary} Goal: {run_state.user_goal}",
-        collected_by_agent=task.assigned_agent,
-        confidence=0.84,
+    planned_tool_call = build_planned_tool_call(
+        agent_name=task.assigned_agent,
+        user_goal=run_state.user_goal,
+        task_title=task.title,
     )
-    return TurnExecutionResult(summary=summary, evidence_records=[evidence_record])
+    return TurnExecutionResult(
+        summary=summary,
+        planned_tool_calls=[planned_tool_call],
+    )
+
+
+def build_planned_tool_call(
+    agent_name: str,
+    user_goal: str,
+    task_title: str,
+) -> PlannedToolCall:
+    if agent_name == "planner":
+        tool_name = "goal_analyzer"
+    elif agent_name == "researcher":
+        tool_name = "evidence_lookup"
+    elif agent_name == "writer":
+        tool_name = "summary_writer"
+    elif agent_name == "executor":
+        tool_name = "execution_checker"
+    else:
+        tool_name = "generic_tool"
+
+    return PlannedToolCall(
+        tool_name=tool_name,
+        tool_input={
+            "user_goal": user_goal,
+            "task_title": task_title,
+            "agent_name": agent_name,
+        },
+    )
 
 
 def build_turn_summary(agent_name: str, task_title: str) -> str:

@@ -5,16 +5,22 @@ from multi_agent_platform.application.run_approvals import (
 )
 from multi_agent_platform.application.run_events import build_run_event_list_response
 from multi_agent_platform.application.run_plans import build_run_plan_response
+from multi_agent_platform.application.run_tool_calls import (
+    build_run_tool_call_list_response,
+)
 from multi_agent_platform.application.run_turns import (
     build_run_turn_advance_response,
     build_run_turn_list_response,
 )
-from multi_agent_platform.application.run_verifications import build_run_verification_report
+from multi_agent_platform.application.run_verifications import (
+    build_run_verification_report,
+)
 from multi_agent_platform.application.run_views import (
     build_run_list_response,
     build_run_response,
     build_run_state_response,
 )
+from multi_agent_platform.contracts.common import generate_identifier
 from multi_agent_platform.contracts.run_approval_views import (
     RunApprovalListResponse,
     RunApprovalResponse,
@@ -41,6 +47,13 @@ from multi_agent_platform.contracts.run_events import (
 )
 from multi_agent_platform.contracts.run_plan_views import RunPlanResponse
 from multi_agent_platform.contracts.run_queries import RunListQuery
+from multi_agent_platform.contracts.run_tool_call_views import (
+    RunToolCallListResponse,
+)
+from multi_agent_platform.contracts.run_tool_calls import (
+    RunToolCallListQuery,
+    RunToolCallRecord,
+)
 from multi_agent_platform.contracts.run_turn_views import (
     RunTurnAdvanceResponse,
     RunTurnListResponse,
@@ -49,13 +62,16 @@ from multi_agent_platform.contracts.run_turns import (
     RunTurnListQuery,
     RunTurnRecord,
 )
-from multi_agent_platform.contracts.run_verification_views import RunVerificationResponse
+from multi_agent_platform.contracts.run_verification_views import (
+    RunVerificationResponse,
+)
 from multi_agent_platform.contracts.run_views import (
     RunListResponse,
     RunResponse,
     RunStateResponse,
 )
 from multi_agent_platform.contracts.runs import (
+    EvidenceRecord,
     RunCreateRequest,
     RunStateSnapshot,
     TaskRecord,
@@ -70,14 +86,20 @@ from multi_agent_platform.orchestration.state import (
     start_task,
 )
 from multi_agent_platform.planning.templates import build_run_plan
-from multi_agent_platform.storage.run_approval_repository import RunApprovalRepository
+from multi_agent_platform.storage.run_approval_repository import (
+    RunApprovalRepository,
+)
 from multi_agent_platform.storage.run_event_repository import RunEventRepository
 from multi_agent_platform.storage.run_plan_repository import RunPlanRepository
 from multi_agent_platform.storage.run_repository import RunRepository
+from multi_agent_platform.storage.run_tool_call_repository import (
+    RunToolCallRepository,
+)
 from multi_agent_platform.storage.run_turn_repository import RunTurnRepository
 from multi_agent_platform.storage.run_verification_repository import (
     RunVerificationRepository,
 )
+from multi_agent_platform.tools.registry import execute_planned_tool_call
 
 
 class ApprovalTransitionError(ValueError):
@@ -101,6 +123,7 @@ class RunService:
         run_approval_repository: RunApprovalRepository,
         run_plan_repository: RunPlanRepository,
         run_turn_repository: RunTurnRepository,
+        run_tool_call_repository: RunToolCallRepository,
     ) -> None:
         self._run_repository = run_repository
         self._run_event_repository = run_event_repository
@@ -108,6 +131,7 @@ class RunService:
         self._run_approval_repository = run_approval_repository
         self._run_plan_repository = run_plan_repository
         self._run_turn_repository = run_turn_repository
+        self._run_tool_call_repository = run_tool_call_repository
 
     def create_run(self, request: RunCreateRequest) -> RunResponse:
         run_state = create_run_state(request)
@@ -174,32 +198,74 @@ class RunService:
             if next_task is None:
                 raise TurnAdvanceError(f"Run {run_id} has no ready task to advance")
             run_state = start_task(run_state, next_task.task_id)
+            self._record_event(
+                run_id=run_id,
+                event_type=RunEventType.TASK_STARTED,
+                payload={"task_id": next_task.task_id},
+            )
 
         active_task = self._find_active_task(run_state)
         if active_task is None:
             raise TurnAdvanceError(f"Run {run_id} does not have an active task")
 
+        turn_id = generate_identifier("turn")
         turn_result = execute_deterministic_turn(run_state, active_task)
+        tool_call_ids: list[str] = []
         evidence_ids: list[str] = []
 
-        for evidence_record in turn_result.evidence_records:
+        for planned_tool_call in turn_result.planned_tool_calls:
+            tool_execution = execute_planned_tool_call(planned_tool_call)
+            tool_call_record = self._run_tool_call_repository.save(
+                RunToolCallRecord(
+                    run_id=run_id,
+                    turn_id=turn_id,
+                    task_id=active_task.task_id,
+                    agent_name=active_task.assigned_agent,
+                    tool_name=tool_execution.tool_name,
+                    tool_input=tool_execution.tool_input,
+                    tool_output=tool_execution.tool_output,
+                )
+            )
+            tool_call_ids.append(tool_call_record.tool_call_id)
+            self._record_event(
+                run_id=run_id,
+                event_type=RunEventType.TOOL_EXECUTED,
+                payload={
+                    "tool_call_id": tool_call_record.tool_call_id,
+                    "tool_name": tool_call_record.tool_name,
+                    "task_id": active_task.task_id,
+                },
+            )
+
+            evidence_record = self._build_evidence_from_tool_call(tool_call_record)
             run_state = record_evidence(run_state, evidence_record)
             evidence_ids.append(evidence_record.evidence_id)
+            self._record_event(
+                run_id=run_id,
+                event_type=RunEventType.EVIDENCE_RECORDED,
+                payload={"evidence_id": evidence_record.evidence_id},
+            )
 
         run_state = complete_task(run_state, active_task.task_id)
+        self._record_event(
+            run_id=run_id,
+            event_type=RunEventType.TASK_COMPLETED,
+            payload={"task_id": active_task.task_id},
+        )
         stored_run_state = self._run_repository.update(run_state)
 
         turn_record = self._run_turn_repository.save(
             RunTurnRecord(
+                turn_id=turn_id,
                 run_id=run_id,
                 task_id=active_task.task_id,
                 agent_name=active_task.assigned_agent,
                 summary=turn_result.summary,
+                tool_call_ids=tool_call_ids,
                 evidence_ids=evidence_ids,
                 resulting_run_status=stored_run_state.status,
             )
         )
-
         self._record_event(
             run_id=run_id,
             event_type=RunEventType.TURN_EXECUTED,
@@ -219,6 +285,15 @@ class RunService:
         self._run_repository.get(run_id)
         run_turn_page = self._run_turn_repository.list(run_id, query)
         return build_run_turn_list_response(run_turn_page)
+
+    def list_tool_calls(
+        self,
+        run_id: str,
+        query: RunToolCallListQuery,
+    ) -> RunToolCallListResponse:
+        self._run_repository.get(run_id)
+        run_tool_call_page = self._run_tool_call_repository.list(run_id, query)
+        return build_run_tool_call_list_response(run_tool_call_page)
 
     def list_run_events(
         self,
@@ -392,6 +467,22 @@ class RunService:
             if task.task_id == current_task_id:
                 return task
         return None
+
+    def _build_evidence_from_tool_call(
+        self,
+        tool_call_record: RunToolCallRecord,
+    ) -> EvidenceRecord:
+        output_summary = "; ".join(
+            f"{key}: {value}" for key, value in tool_call_record.tool_output.items()
+        )
+        return EvidenceRecord(
+            evidence_id=generate_identifier("evidence"),
+            source_type="tool_call",
+            source_ref=tool_call_record.tool_call_id,
+            summary=f"{tool_call_record.tool_name} produced {output_summary}",
+            collected_by_agent=tool_call_record.agent_name,
+            confidence=0.86,
+        )
 
     def _record_event(
         self,
