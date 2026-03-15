@@ -6,6 +6,7 @@ from fastapi import status as http_status
 from multi_agent_platform.api.dependencies import get_run_service
 from multi_agent_platform.application.runs import (
     ApprovalTransitionError,
+    FinalizationError,
     PlanningTransitionError,
     RunService,
     StateTransitionError,
@@ -29,21 +30,37 @@ from multi_agent_platform.contracts.run_commands import (
 )
 from multi_agent_platform.contracts.run_event_views import RunEventListResponse
 from multi_agent_platform.contracts.run_events import RunEventListQuery
+from multi_agent_platform.contracts.run_output_views import RunOutputResponse
 from multi_agent_platform.contracts.run_plan_views import RunPlanResponse
 from multi_agent_platform.contracts.run_queries import RunListQuery
+from multi_agent_platform.contracts.run_tool_call_views import (
+    RunToolCallListResponse,
+)
+from multi_agent_platform.contracts.run_tool_calls import (
+    RunToolCallListQuery,
+)
 from multi_agent_platform.contracts.run_turn_views import (
     RunTurnAdvanceResponse,
     RunTurnListResponse,
 )
 from multi_agent_platform.contracts.run_turns import RunTurnListQuery
-from multi_agent_platform.contracts.run_verification_views import RunVerificationResponse
+from multi_agent_platform.contracts.run_verification_views import (
+    RunVerificationResponse,
+)
 from multi_agent_platform.contracts.run_views import (
     RunListResponse,
     RunResponse,
     RunStateResponse,
 )
-from multi_agent_platform.contracts.runs import RunCreateRequest, RunStatus, WorkflowType
-from multi_agent_platform.storage.run_approval_repository import RunApprovalNotFoundError
+from multi_agent_platform.contracts.runs import (
+    RunCreateRequest,
+    RunStatus,
+    WorkflowType,
+)
+from multi_agent_platform.storage.run_approval_repository import (
+    RunApprovalNotFoundError,
+)
+from multi_agent_platform.storage.run_output_repository import RunOutputNotFoundError
 from multi_agent_platform.storage.run_plan_repository import RunPlanNotFoundError
 from multi_agent_platform.storage.run_repository import RunNotFoundError
 from multi_agent_platform.storage.run_verification_repository import (
@@ -87,6 +104,13 @@ def build_run_turn_list_query(
     return RunTurnListQuery(limit=limit, offset=offset)
 
 
+def build_run_tool_call_list_query(
+    limit: LimitQuery = 20,
+    offset: OffsetQuery = 0,
+) -> RunToolCallListQuery:
+    return RunToolCallListQuery(limit=limit, offset=offset)
+
+
 def build_approval_list_query(
     limit: LimitQuery = 20,
     offset: OffsetQuery = 0,
@@ -96,9 +120,22 @@ def build_approval_list_query(
 
 
 RunListQueryDependency = Annotated[RunListQuery, Depends(build_run_list_query)]
-RunEventListQueryDependency = Annotated[RunEventListQuery, Depends(build_run_event_list_query)]
-RunTurnListQueryDependency = Annotated[RunTurnListQuery, Depends(build_run_turn_list_query)]
-ApprovalListQueryDependency = Annotated[ApprovalListQuery, Depends(build_approval_list_query)]
+RunEventListQueryDependency = Annotated[
+    RunEventListQuery,
+    Depends(build_run_event_list_query),
+]
+RunTurnListQueryDependency = Annotated[
+    RunTurnListQuery,
+    Depends(build_run_turn_list_query),
+]
+RunToolCallListQueryDependency = Annotated[
+    RunToolCallListQuery,
+    Depends(build_run_tool_call_list_query),
+]
+ApprovalListQueryDependency = Annotated[
+    ApprovalListQuery,
+    Depends(build_approval_list_query),
+]
 
 
 def map_run_error(error: Exception) -> HTTPException:
@@ -106,11 +143,15 @@ def map_run_error(error: Exception) -> HTTPException:
         return HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(error))
     if isinstance(error, RunApprovalNotFoundError):
         return HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(error))
+    if isinstance(error, RunOutputNotFoundError):
+        return HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(error))
     if isinstance(error, RunPlanNotFoundError):
         return HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(error))
     if isinstance(error, RunVerificationNotFoundError):
         return HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(error))
     if isinstance(error, ApprovalTransitionError):
+        return HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail=str(error))
+    if isinstance(error, FinalizationError):
         return HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail=str(error))
     if isinstance(error, PlanningTransitionError):
         return HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail=str(error))
@@ -186,6 +227,18 @@ def list_run_turns(
         raise map_run_error(error) from error
 
 
+@router.get("/{run_id}/tool-calls", response_model=RunToolCallListResponse)
+def list_run_tool_calls(
+    run_id: str,
+    query: RunToolCallListQueryDependency,
+    run_service: RunServiceDependency,
+) -> RunToolCallListResponse:
+    try:
+        return run_service.list_tool_calls(run_id, query)
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
 @router.post("/{run_id}/turns/advance", response_model=RunTurnAdvanceResponse)
 def advance_run_turn(
     run_id: str,
@@ -193,6 +246,28 @@ def advance_run_turn(
 ) -> RunTurnAdvanceResponse:
     try:
         return run_service.advance_turn(run_id)
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
+@router.get("/{run_id}/outputs/latest", response_model=RunOutputResponse)
+def get_latest_run_output(
+    run_id: str,
+    run_service: RunServiceDependency,
+) -> RunOutputResponse:
+    try:
+        return run_service.get_latest_output(run_id)
+    except Exception as error:
+        raise map_run_error(error) from error
+
+
+@router.post("/{run_id}/finalize", response_model=RunOutputResponse)
+def finalize_run(
+    run_id: str,
+    run_service: RunServiceDependency,
+) -> RunOutputResponse:
+    try:
+        return run_service.finalize_run(run_id)
     except Exception as error:
         raise map_run_error(error) from error
 

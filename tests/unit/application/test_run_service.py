@@ -34,6 +34,7 @@ from multi_agent_platform.storage.run_approval_repository import (
     InMemoryRunApprovalRepository,
 )
 from multi_agent_platform.storage.run_event_repository import InMemoryRunEventRepository
+from multi_agent_platform.storage.run_output_repository import InMemoryRunOutputRepository
 from multi_agent_platform.storage.run_plan_repository import InMemoryRunPlanRepository
 from multi_agent_platform.storage.run_repository import (
     InMemoryRunRepository,
@@ -57,6 +58,7 @@ def build_run_service() -> RunService:
         run_plan_repository=InMemoryRunPlanRepository(),
         run_turn_repository=InMemoryRunTurnRepository(),
         run_tool_call_repository=InMemoryRunToolCallRepository(),
+        run_output_repository=InMemoryRunOutputRepository(),
     )
 
 
