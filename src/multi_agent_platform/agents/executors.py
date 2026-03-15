@@ -36,7 +36,9 @@ class DeterministicTurnExecutor:
             return
         if execution_profile.agent_name != task.assigned_agent:
             raise ValueError(
-                f"Execution profile agent {execution_profile.agent_name} does not match task agent {task.assigned_agent}"
+                "Execution profile agent "
+                f"{execution_profile.agent_name} does not match "
+                f"task agent {task.assigned_agent}"
             )
         if execution_profile.backend is not ExecutionBackend.DETERMINISTIC:
             raise ValueError("DeterministicTurnExecutor requires deterministic backend")
