@@ -1,23 +1,40 @@
 # Phase status
 
-## Current step
+## Current platform state
 
-Step 15 - Deterministic agent turn engine and turn history
+Core execution spine is implemented.
 
-## Goal
+Completed areas:
 
-Add deterministic turn contracts, turn storage, service-level turn advancement, turn history endpoints, and automatic task progression through agent turns.
+- foundation and toolchain
+- API surface
+- run state contracts
+- planning
+- deterministic turn execution
+- deterministic tool execution
+- evidence recording
+- approvals
+- verification
+- final output synthesis
+- in-memory storage
+- SQL-backed durable persistence
+- unit and integration tests for the implemented platform spine
 
-## Exit criteria
+## Remaining wrap-up work
 
-- [ ] turn contracts exist
-- [ ] turn repository abstraction exists
-- [ ] in-memory turn repository exists
-- [ ] deterministic agent runtime exists
-- [ ] run service can advance turns and list turn history
-- [ ] turn execution records events
-- [ ] turn endpoints exist
-- [ ] API, service, storage, and runtime tests cover turn behavior
-- [ ] `make check` passes
-- [ ] human review is complete
-- [ ] commit is created
+- final docs polish
+- release-readiness cleanup
+- optional CI refinement
+- optional migration strategy for long-term SQL evolution
+
+## Current recommended usage
+
+Use memory mode for fast development and SQL mode for durable local validation.
+
+## Near-term production upgrades
+
+- schema migration workflow
+- postgres environment
+- richer observability
+- auth and RBAC
+- real provider-backed agent execution

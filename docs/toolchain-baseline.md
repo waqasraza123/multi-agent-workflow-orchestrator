@@ -1,8 +1,6 @@
 # Toolchain baseline
 
-This repository uses a root Python tooling baseline before higher-level product layers are added.
-
-## Selected tools
+## Runtime and tooling
 
 - Python 3.12
 - uv
@@ -10,18 +8,32 @@ This repository uses a root Python tooling baseline before higher-level product 
 - mypy
 - pytest
 - FastAPI
-- Uvicorn
+- SQLAlchemy
 
-## Local commands
+## Standard commands
 
-- Bootstrap: `uv sync --group dev`
-- Full local check: `make check`
-- Run API locally: `make run-api`
-- Lint only: `uv run ruff check .`
-- Format check only: `uv run ruff format --check .`
-- Typecheck current code: `uv run mypy src tests`
-- Run tests: `uv run pytest -q`
+Bootstrap:
 
-## Current scope
+    uv sync --group dev
 
-The repository now contains a root `src/` package with contracts, orchestration state logic, application services, storage abstractionble FastAPI application backed by in-memory persistence.
+Quality gates:
+
+    uv run ruff check .
+    uv run ruff format --check .
+    uv run mypy src tests
+    uv run pytest -q
+    make check
+
+## Storage modes
+
+Memory mode is the default local developer path.
+
+SQL mode is enabled with:
+
+    STORAGE_BACKEND=sql
+    DATABASE_URL=sqlite:///./.workdir/multi_agent_platform.db
+
+## Notes
+
+The platform is backend-first and API-driven.
+The current repo is suitable for continued backend expansion and later production hardening.

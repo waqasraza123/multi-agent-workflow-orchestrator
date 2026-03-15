@@ -1,26 +1,53 @@
 # Architecture overview
 
-This repository is a production-grade multi-agent research and execution platform.
+## Purpose
 
-## Current source layout
+The platform is a backend-first multi-agent execution system that turns a user goal into a persisted run, generates a plan, advances deterministic turns, executes tools, records evidence, verifies completion, and produces a final output.
 
-The implementation uses a single root source package under `src/multi_agent_platform/`.
+## Layering
 
-This keeps the codebase modular without introducing premature multi-package packaging complexity. Domain boundaries exist as internal subpackages and can be extracted later if the repository outgrows a single root package.
+### API layer
+FastAPI routes expose the platform workflow and translate application errors into HTTP responses.
 
-## Domain boundaries
+### Application layer
+The service layer coordinates repositories, state transitions, planning, turns, tools, verification, approvals, and final output synthesis.
 
-- `multi_agent_platform.contracts` - Typed request, query, response, state, entity, command, event, verification, approval, planning, and turn models
-- `multi_agent_platform.application` - Use-case orchestration across repositories and domain logic
-- `multi_agent_platform.api` - HTTP routing, dependency wiring, and response shaping
-- `multi_agent_platform.orchestration` - Deterministic workflow state transitions
-- `multi_agent_platform.planning` - Deterministic workflow planning templates and task graph generation
-- `multi_agent_platform.agents` - Deterministic agent turn execution
-- `multi_agent_platform.storage` - Repository interfaces and implementations
-- `multi_agent_platform.tools` - Tool interfaces and adapters
-- `multi_agent_platform.verification` - Deterministic validation and verifier logic
-- `multi_agent_platform.observability` - Logging, tracing, and metrics helpers
+### Contracts layer
+Contracts define the stable request, response, and domain models used across the platform.
 
-## Current implementation boundary
+### Orchestration layer
+State transition functions own run-state mutation rules for tasks and evidence.
 
-The repository includes a runnable FastAPI app with application services, in-memory repositories for runs, events, verifications, approvals, plans, and turns, deterministic workflow state transitions, explicit audit and review surfaces, deterministic plan generation, and deterministic turn-based execution.
+### Planning layer
+Planning generates deterministic task sequences from the run goal and workflow type.
+
+### Agent runtime layer
+The deterministic runtime advances a task through one turn and proposes tool calls.
+
+### Tools layer
+The registry executes deterministic tool adapters and returns structured tool outputs.
+
+### Storage layer
+Repositories persist run state, events, approvals, plans, turns, tool calls, verifications, and outputs.
+The platform supports both in-memory and SQL-backed implementations behind the same service boundary.
+
+### Config layer
+Settings select the storage backend and database URL.
+
+## Current execution flow
+
+1. create run
+2. generate plan
+3. register tasks
+4. advance deterministic turns
+5. persist tool calls and evidence
+6. verify run
+7. finalize output
+8. persist terminal completed state
+
+## Current storage modes
+
+- memory
+- sql
+
+SQL mode currently targets SQLite locally and keeps a Postgres-ready repository boundary through SQLAlchemy models and sessions.
