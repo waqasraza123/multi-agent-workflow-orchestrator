@@ -35,8 +35,7 @@ def test_finalize_endpoint_returns_latest_output() -> None:
     assert finalize_response.status_code == 200
     assert latest_output.status_code == 200
     assert (
-        latest_output.json()["item"]["output_id"]
-        == finalize_response.json()["item"]["output_id"]
+        latest_output.json()["item"]["output_id"] == finalize_response.json()["item"]["output_id"]
     )
     assert state_response.json()["item"]["status"] == "completed"
 

@@ -4,6 +4,7 @@ from multi_agent_platform.application.run_approvals import (
     build_run_approval_response,
 )
 from multi_agent_platform.application.run_events import build_run_event_list_response
+from multi_agent_platform.application.run_outputs import build_run_output_response
 from multi_agent_platform.application.run_plans import build_run_plan_response
 from multi_agent_platform.application.run_tool_calls import (
     build_run_tool_call_list_response,
@@ -45,6 +46,8 @@ from multi_agent_platform.contracts.run_events import (
     RunEventRecord,
     RunEventType,
 )
+from multi_agent_platform.contracts.run_output_views import RunOutputResponse
+from multi_agent_platform.contracts.run_outputs import RunOutputRecord
 from multi_agent_platform.contracts.run_plan_views import RunPlanResponse
 from multi_agent_platform.contracts.run_queries import RunListQuery
 from multi_agent_platform.contracts.run_tool_call_views import (
@@ -65,6 +68,7 @@ from multi_agent_platform.contracts.run_turns import (
 from multi_agent_platform.contracts.run_verification_views import (
     RunVerificationResponse,
 )
+from multi_agent_platform.contracts.run_verifications import VerificationVerdict
 from multi_agent_platform.contracts.run_views import (
     RunListResponse,
     RunResponse,
@@ -74,6 +78,7 @@ from multi_agent_platform.contracts.runs import (
     EvidenceRecord,
     RunCreateRequest,
     RunStateSnapshot,
+    RunStatus,
     TaskRecord,
     TaskStatus,
 )
@@ -90,6 +95,7 @@ from multi_agent_platform.storage.run_approval_repository import (
     RunApprovalRepository,
 )
 from multi_agent_platform.storage.run_event_repository import RunEventRepository
+from multi_agent_platform.storage.run_output_repository import RunOutputRepository
 from multi_agent_platform.storage.run_plan_repository import RunPlanRepository
 from multi_agent_platform.storage.run_repository import RunRepository
 from multi_agent_platform.storage.run_tool_call_repository import (
@@ -114,6 +120,10 @@ class TurnAdvanceError(ValueError):
     pass
 
 
+class FinalizationError(ValueError):
+    pass
+
+
 class RunService:
     def __init__(
         self,
@@ -124,6 +134,7 @@ class RunService:
         run_plan_repository: RunPlanRepository,
         run_turn_repository: RunTurnRepository,
         run_tool_call_repository: RunToolCallRepository,
+        run_output_repository: RunOutputRepository,
     ) -> None:
         self._run_repository = run_repository
         self._run_event_repository = run_event_repository
@@ -132,6 +143,7 @@ class RunService:
         self._run_plan_repository = run_plan_repository
         self._run_turn_repository = run_turn_repository
         self._run_tool_call_repository = run_tool_call_repository
+        self._run_output_repository = run_output_repository
 
     def create_run(self, request: RunCreateRequest) -> RunResponse:
         run_state = create_run_state(request)
@@ -276,6 +288,75 @@ class RunService:
             },
         )
         return build_run_turn_advance_response(turn_record, stored_run_state)
+
+    def finalize_run(self, run_id: str) -> RunOutputResponse:
+        run_state = self._run_repository.get(run_id)
+        if run_state.status is not RunStatus.VERIFYING:
+            raise FinalizationError(f"Run {run_id} must be verifying before it can be finalized")
+
+        verification_report = self._run_verification_repository.get_latest(run_id)
+        if verification_report.verdict is not VerificationVerdict.PASS:
+            raise FinalizationError(
+                f"Run {run_id} requires a passing verification before finalization"
+            )
+
+        pending_approvals = self._run_approval_repository.list(
+            run_id,
+            ApprovalListQuery(limit=100, offset=0, status=ApprovalStatus.PENDING),
+        )
+        if pending_approvals.page.total_count > 0:
+            raise FinalizationError(f"Run {run_id} has pending approvals and cannot be finalized")
+
+        turn_page = self._run_turn_repository.list(
+            run_id,
+            RunTurnListQuery(limit=100, offset=0),
+        )
+        tool_call_page = self._run_tool_call_repository.list(
+            run_id,
+            RunToolCallListQuery(limit=100, offset=0),
+        )
+
+        output_record = self._run_output_repository.save(
+            RunOutputRecord(
+                run_id=run_id,
+                title=f"Final output for {run_state.user_goal}",
+                summary=(
+                    f"Completed run with {len(run_state.tasks)} tasks, "
+                    f"{len(run_state.evidence)} evidence items, and "
+                    f"{len(tool_call_page.items)} tool calls."
+                ),
+                key_findings=self._build_key_findings(
+                    run_state,
+                    turn_page.items,
+                    tool_call_page.items,
+                ),
+                evidence_refs=[item.evidence_id for item in run_state.evidence],
+                tool_call_refs=[item.tool_call_id for item in tool_call_page.items],
+                turn_refs=[item.turn_id for item in turn_page.items],
+            )
+        )
+
+        updated_run_state = run_state.model_copy(
+            update={
+                "status": RunStatus.COMPLETED,
+                "final_output_ref": output_record.output_id,
+            }
+        )
+        self._run_repository.update(updated_run_state)
+        self._record_event(
+            run_id=run_id,
+            event_type=RunEventType.RUN_FINALIZED,
+            payload={
+                "output_id": output_record.output_id,
+                "status": RunStatus.COMPLETED.value,
+            },
+        )
+        return build_run_output_response(output_record)
+
+    def get_latest_output(self, run_id: str) -> RunOutputResponse:
+        self._run_repository.get(run_id)
+        output_record = self._run_output_repository.get_latest(run_id)
+        return build_run_output_response(output_record)
 
     def list_turns(
         self,
@@ -484,6 +565,26 @@ class RunService:
             confidence=0.86,
         )
 
+    def _build_key_findings(
+        self,
+        run_state: RunStateSnapshot,
+        turn_records: list[RunTurnRecord],
+        tool_call_records: list[RunToolCallRecord],
+    ) -> list[str]:
+        findings = [
+            f"Completed {task.title}"
+            for task in run_state.tasks
+            if task.status is TaskStatus.COMPLETED
+        ]
+        findings.extend(
+            f"{item.tool_name}: {'; '.join(item.tool_output.values())}"
+            for item in tool_call_records
+        )
+        findings.extend(item.summary for item in turn_records)
+        if not findings:
+            findings.append("Run completed through deterministic execution.")
+        return findings[:6]
+
     def _record_event(
         self,
         run_id: str,
@@ -508,6 +609,7 @@ class RunService:
 
 __all__ = [
     "ApprovalTransitionError",
+    "FinalizationError",
     "PlanningTransitionError",
     "RunService",
     "StateTransitionError",

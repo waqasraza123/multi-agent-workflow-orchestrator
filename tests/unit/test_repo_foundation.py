@@ -83,9 +83,7 @@ def test_foundation_files_exist() -> None:
         "tests/unit/tools/test_registry.py",
     ]
     for relative_path in required_files:
-        assert relative_path_exists(relative_path), (
-            f"Missing required file: {relative_path}"
-        )
+        assert relative_path_exists(relative_path), f"Missing required file: {relative_path}"
 
 
 def test_foundation_directories_exist() -> None:

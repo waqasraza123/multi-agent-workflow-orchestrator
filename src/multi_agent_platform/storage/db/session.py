@@ -4,8 +4,6 @@ from pathlib import Path
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from multi_agent_platform.storage.db.base import Base
-
 
 def _prepare_database_url(database_url: str) -> str:
     if database_url.startswith("sqlite:///"):
@@ -17,8 +15,13 @@ def _prepare_database_url(database_url: str) -> str:
 
 @lru_cache
 def get_engine(database_url: str) -> Engine:
+    import multi_agent_platform.storage.db.models as models_module
+
+    _ = models_module
     normalized_database_url = _prepare_database_url(database_url)
-    connect_args = {"check_same_thread": False} if normalized_database_url.startswith("sqlite") else {}
+    connect_args = (
+        {"check_same_thread": False} if normalized_database_url.startswith("sqlite") else {}
+    )
     return create_engine(
         normalized_database_url,
         future=True,
@@ -33,5 +36,7 @@ def get_session_factory(database_url: str) -> sessionmaker[Session]:
 
 
 def ensure_database_schema(database_url: str) -> None:
+    from multi_agent_platform.storage.db.base import Base
+
     engine = get_engine(database_url)
     Base.metadata.create_all(engine)

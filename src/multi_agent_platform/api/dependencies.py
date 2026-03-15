@@ -1,4 +1,3 @@
-
 from multi_agent_platform.application.runs import RunService
 from multi_agent_platform.config.settings import get_settings, reset_settings_cache
 from multi_agent_platform.storage.db.session import ensure_database_schema, get_session_factory
@@ -44,7 +43,6 @@ def build_memory_run_service() -> RunService:
 def build_sql_run_service(database_url: str) -> RunService:
     ensure_database_schema(database_url)
     session_factory = get_session_factory(database_url)
-
     return RunService(
         run_repository=SqlAlchemyRunRepository(session_factory),
         run_event_repository=SqlAlchemyRunEventRepository(session_factory),

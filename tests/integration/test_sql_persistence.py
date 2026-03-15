@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -11,8 +12,9 @@ from multi_agent_platform.main import app
 def configure_sql_storage(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    database_url = f"sqlite:///{tmp_path / multi_agent_platform.db}"
+) -> Generator[None, None, None]:
+    database_file = tmp_path / "multi_agent_platform.db"
+    database_url = f"sqlite:///{database_file}"
     monkeypatch.setenv("STORAGE_BACKEND", "sql")
     monkeypatch.setenv("DATABASE_URL", database_url)
     reset_api_state()

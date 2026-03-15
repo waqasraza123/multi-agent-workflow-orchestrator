@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from typing import TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy import func, select
@@ -48,14 +47,12 @@ from multi_agent_platform.storage.run_verification_repository import (
     RunVerificationNotFoundError,
 )
 
-ModelType = TypeVar("ModelType", bound=BaseModel)
-
 
 def _serialize_model(model: BaseModel) -> str:
     return model.model_dump_json()
 
 
-def _deserialize_model(model_type: type[ModelType], payload: str) -> ModelType:
+def _deserialize_model[T: BaseModel](model_type: type[T], payload: str) -> T:
     return model_type.model_validate_json(payload)
 
 
@@ -126,9 +123,7 @@ class SqlAlchemyRunRepository:
                 RunStateRow.created_at.desc(),
                 RunStateRow.run_id.desc(),
             )
-            rows = session.scalars(
-                ordered_stmt.offset(query.offset).limit(query.limit)
-            ).all()
+            rows = session.scalars(ordered_stmt.offset(query.offset).limit(query.limit)).all()
             return RunStatePage(
                 items=[
                     _deserialize_model(RunStateSnapshot, row.payload).model_copy(deep=True)
@@ -166,9 +161,7 @@ class SqlAlchemyRunEventRepository:
                 RunEventRow.occurred_at.desc(),
                 RunEventRow.event_id.desc(),
             )
-            rows = session.scalars(
-                ordered_stmt.offset(query.offset).limit(query.limit)
-            ).all()
+            rows = session.scalars(ordered_stmt.offset(query.offset).limit(query.limit)).all()
             return RunEventPage(
                 items=[
                     _deserialize_model(RunEventRecord, row.payload).model_copy(deep=True)
@@ -201,7 +194,9 @@ class SqlAlchemyRunApprovalRepository:
             row = session.get(RunApprovalRow, approval_record.approval_id)
             if row is None:
                 raise RunApprovalNotFoundError(
-                    f"Approval {approval_record.approval_id} does not exist for run {approval_record.run_id}"
+                    "Approval "
+                    f"{approval_record.approval_id} does not exist for run "
+                    f"{approval_record.run_id}"
                 )
             row.status = approval_record.status.value
             row.requested_at = approval_record.requested_at
@@ -230,9 +225,7 @@ class SqlAlchemyRunApprovalRepository:
                 RunApprovalRow.requested_at.desc(),
                 RunApprovalRow.approval_id.desc(),
             )
-            rows = session.scalars(
-                ordered_stmt.offset(query.offset).limit(query.limit)
-            ).all()
+            rows = session.scalars(ordered_stmt.offset(query.offset).limit(query.limit)).all()
             return ApprovalPage(
                 items=[
                     _deserialize_model(ApprovalRecord, row.payload).model_copy(deep=True)
@@ -265,7 +258,10 @@ class SqlAlchemyRunVerificationRepository:
             stmt = (
                 select(RunVerificationRow)
                 .where(RunVerificationRow.run_id == run_id)
-                .order_by(RunVerificationRow.created_at.desc(), RunVerificationRow.verification_id.desc())
+                .order_by(
+                    RunVerificationRow.created_at.desc(),
+                    RunVerificationRow.verification_id.desc(),
+                )
                 .limit(1)
             )
             row = session.scalar(stmt)
@@ -333,9 +329,7 @@ class SqlAlchemyRunTurnRepository:
                 RunTurnRow.created_at.desc(),
                 RunTurnRow.turn_id.desc(),
             )
-            rows = session.scalars(
-                ordered_stmt.offset(query.offset).limit(query.limit)
-            ).all()
+            rows = session.scalars(ordered_stmt.offset(query.offset).limit(query.limit)).all()
             return RunTurnPage(
                 items=[
                     _deserialize_model(RunTurnRecord, row.payload).model_copy(deep=True)
@@ -374,9 +368,7 @@ class SqlAlchemyRunToolCallRepository:
                 RunToolCallRow.created_at.desc(),
                 RunToolCallRow.tool_call_id.desc(),
             )
-            rows = session.scalars(
-                ordered_stmt.offset(query.offset).limit(query.limit)
-            ).all()
+            rows = session.scalars(ordered_stmt.offset(query.offset).limit(query.limit)).all()
             return RunToolCallPage(
                 items=[
                     _deserialize_model(RunToolCallRecord, row.payload).model_copy(deep=True)
