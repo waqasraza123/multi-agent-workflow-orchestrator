@@ -5,7 +5,6 @@ from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from multi_agent_platform.storage.db.base import Base
-from multi_agent_platform.storage.db import models as _models
 
 
 def _prepare_database_url(database_url: str) -> str:
