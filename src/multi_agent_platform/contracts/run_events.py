@@ -20,6 +20,7 @@ class RunEventType(StrEnum):
     PLAN_GENERATED = "plan_generated"
     TURN_EXECUTED = "turn_executed"
     TOOL_EXECUTED = "tool_executed"
+    RUN_FINALIZED = "run_finalized"
 
 
 class RunEventRecord(BaseModel):
