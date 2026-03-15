@@ -2,7 +2,7 @@
 
 ## Current platform state
 
-Core execution spine is implemented.
+Core execution spine is implemented and wrapped for presentation.
 
 Completed areas:
 
@@ -19,22 +19,26 @@ Completed areas:
 - in-memory storage
 - SQL-backed durable persistence
 - unit and integration tests for the implemented platform spine
-
-## Remaining wrap-up work
-
-- final docs polish
-- release-readiness cleanup
-- optional CI refinement
-- optional migration strategy for long-term SQL evolution
+- documentation and release-readiness smoke flows
 
 ## Current recommended usage
 
 Use memory mode for fast development and SQL mode for durable local validation.
 
-## Near-term production upgrades
+## Project readiness
 
-- schema migration workflow
-- postgres environment
-- richer observability
+This repository is now in a good backend MVP state for:
+
+- demos
+- portfolio presentation
+- client discussions
+- further production hardening
+
+## Next practical upgrades
+
+- Alembic migrations
+- PostgreSQL deployment profile
 - auth and RBAC
-- real provider-backed agent execution
+- real provider-backed execution
+- observability and tracing
+- frontend operator console
