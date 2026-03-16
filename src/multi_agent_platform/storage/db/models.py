@@ -77,6 +77,18 @@ class RunToolCallRow(Base):
     payload: Mapped[str] = mapped_column(Text)
 
 
+class RunLlmCallRow(Base):
+    __tablename__ = "run_llm_calls"
+
+    llm_call_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(64), index=True)
+    turn_id: Mapped[str] = mapped_column(String(64), index=True)
+    task_id: Mapped[str] = mapped_column(String(64), index=True)
+    provider_name: Mapped[str] = mapped_column(String(64), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    payload: Mapped[str] = mapped_column(Text)
+
+
 class RunOutputRow(Base):
     __tablename__ = "run_outputs"
 

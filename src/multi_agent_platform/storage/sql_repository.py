@@ -4,6 +4,11 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from multi_agent_platform.contracts.llm_calls import (
+    LlmCallListQuery,
+    LlmCallPage,
+    LlmCallRecord,
+)
 from multi_agent_platform.contracts.run_approvals import (
     ApprovalListQuery,
     ApprovalPage,
@@ -32,6 +37,7 @@ from multi_agent_platform.contracts.runs import RunStateSnapshot
 from multi_agent_platform.storage.db.models import (
     RunApprovalRow,
     RunEventRow,
+    RunLlmCallRow,
     RunOutputRow,
     RunPlanRow,
     RunStateRow,
@@ -39,6 +45,7 @@ from multi_agent_platform.storage.db.models import (
     RunTurnRow,
     RunVerificationRow,
 )
+from multi_agent_platform.storage.llm_call_repository import LlmCallNotFoundError
 from multi_agent_platform.storage.run_approval_repository import RunApprovalNotFoundError
 from multi_agent_platform.storage.run_output_repository import RunOutputNotFoundError
 from multi_agent_platform.storage.run_plan_repository import RunPlanNotFoundError
@@ -372,6 +379,55 @@ class SqlAlchemyRunToolCallRepository:
             return RunToolCallPage(
                 items=[
                     _deserialize_model(RunToolCallRecord, row.payload).model_copy(deep=True)
+                    for row in rows
+                ],
+                page=_build_page_info(total_count, query.limit, query.offset),
+            )
+
+
+class SqlAlchemyRunLlmCallRepository:
+    def __init__(self, session_factory: Callable[[], Session]) -> None:
+        self._session_factory = session_factory
+
+    def save(self, record: LlmCallRecord) -> LlmCallRecord:
+        with self._session_factory() as session:
+            session.add(
+                RunLlmCallRow(
+                    llm_call_id=record.llm_call_id,
+                    run_id=record.run_id,
+                    turn_id=record.turn_id,
+                    task_id=record.task_id,
+                    provider_name=record.provider_name,
+                    created_at=record.created_at,
+                    payload=_serialize_model(record),
+                )
+            )
+            session.commit()
+        return record.model_copy(deep=True)
+
+    def get(self, run_id: str, llm_call_id: str) -> LlmCallRecord:
+        with self._session_factory() as session:
+            row = session.get(RunLlmCallRow, llm_call_id)
+            if row is None or row.run_id != run_id:
+                raise LlmCallNotFoundError(
+                    f"LLM call {llm_call_id} does not exist for run {run_id}"
+                )
+            return _deserialize_model(LlmCallRecord, row.payload).model_copy(deep=True)
+
+    def list(self, run_id: str, query: LlmCallListQuery) -> LlmCallPage:
+        with self._session_factory() as session:
+            filtered_stmt = select(RunLlmCallRow).where(RunLlmCallRow.run_id == run_id)
+            total_count = int(
+                session.scalar(select(func.count()).select_from(filtered_stmt.subquery())) or 0
+            )
+            ordered_stmt = filtered_stmt.order_by(
+                RunLlmCallRow.created_at.desc(),
+                RunLlmCallRow.llm_call_id.desc(),
+            )
+            rows = session.scalars(ordered_stmt.offset(query.offset).limit(query.limit)).all()
+            return LlmCallPage(
+                items=[
+                    _deserialize_model(LlmCallRecord, row.payload).model_copy(deep=True)
                     for row in rows
                 ],
                 page=_build_page_info(total_count, query.limit, query.offset),
