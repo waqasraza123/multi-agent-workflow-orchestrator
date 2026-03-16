@@ -35,9 +35,7 @@ class InMemoryLlmCallRepository:
         for record in existing:
             if record.llm_call_id == llm_call_id:
                 return record.model_copy(deep=True)
-        raise LlmCallNotFoundError(
-            f"LLM call {llm_call_id} does not exist for run {run_id}"
-        )
+        raise LlmCallNotFoundError(f"LLM call {llm_call_id} does not exist for run {run_id}")
 
     def list(self, run_id: str, query: LlmCallListQuery) -> LlmCallPage:
         existing = self._records_by_run_id.get(run_id, [])
