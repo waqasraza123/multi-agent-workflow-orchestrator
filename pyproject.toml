@@ -4,16 +4,31 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "multi-agent-platform"
-version = "0.0.0"
+version = "0.1.0"
 description = "Production-grade multi-agent research and execution platform."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
+license = { text = "MIT" }
+keywords = ["agents", "fastapi", "llm", "orchestration", "research", "workflow"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
 dependencies = [
     "fastapi>=0.115,<1",
     "pydantic>=2,<3",
     "sqlalchemy>=2.0.48",
     "uvicorn>=0.34,<1",
 ]
+
+[project.urls]
+Homepage = "https://github.com/waqasraza123/multi-agent-workflow-orchestrator"
+Repository = "https://github.com/waqasraza123/multi-agent-workflow-orchestrator"
+Issues = "https://github.com/waqasraza123/multi-agent-workflow-orchestrator/issues"
 
 [dependency-groups]
 dev = [

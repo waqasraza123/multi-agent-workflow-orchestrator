@@ -6,19 +6,21 @@ v0.1.0
 
 ## Project overview
 
-Multi-Agent Platform is a backend-first multi-agent research and execution system. It turns a user goal into a persisted run, generates a deterministic plan, advances tasks through deterministic turns, executes deterministic tools, records evidence, supports approval workflows, verifies completion, and produces a final output.
+Multi-Agent Platform is a backend-first multi-agent research and execution system. It turns a user goal into a persisted run, generates a deterministic plan, advances tasks through deterministic or provider-backed turns, executes deterministic tools, records evidence, supports approval workflows, verifies completion, and produces a final output.
 
 ## Implemented scope
 
 - run creation and listing
 - deterministic plan generation
 - task registration and lifecycle
-- deterministic turn advancement
+- deterministic and provider-backed turn advancement
+- deterministic fallback when LLM execution fails
 - deterministic tool execution
 - evidence capture and persistence
 - approval request and decision flow
 - verification reports
 - final output synthesis
+- persisted LLM call artifacts and usage records
 - in-memory storage backend
 - SQL-backed durable storage backend
 - FastAPI endpoints for the current execution workflow
@@ -31,43 +33,62 @@ Multi-Agent Platform is a backend-first multi-agent research and execution syste
 Fast local iteration with in-process state.
 
 Environment:
-- STORAGE_BACKEND=memory
+- `STORAGE_BACKEND=memory`
 
 ### SQL mode
 
 Durable local persistence using SQLite through SQLAlchemy with a PostgreSQL-ready repository boundary.
 
 Environment:
-- STORAGE_BACKEND=sql
-- DATABASE_URL=sqlite:///./.workdir/multi_agent_platform.db
+- `STORAGE_BACKEND=sql`
+- `DATABASE_URL=sqlite:///./.workdir/multi_agent_platform.db`
+
+## Execution modes
+
+### Deterministic mode
+
+Environment:
+- `EXECUTION_BACKEND=deterministic`
+
+### LLM mode
+
+Environment:
+- `EXECUTION_BACKEND=llm`
+- `LLM_PROVIDER_NAME=fake|openai`
+- `LLM_MODEL_NAME=...`
+
+Optional provider settings:
+- `LLM_API_BASE_URL=https://api.openai.com/v1`
+- `LLM_API_KEY=...`
 
 ## Main API flow
 
-1. POST /runs
-2. POST /runs/{run_id}/plan
-3. POST /runs/{run_id}/turns/advance
-4. Repeat turn advancement until verifying
-5. POST /runs/{run_id}/verify
-6. POST /runs/{run_id}/finalize
-7. GET /runs/{run_id}/state
-8. GET /runs/{run_id}/outputs/latest
+1. `POST /runs`
+2. `POST /runs/{run_id}/plan`
+3. `POST /runs/{run_id}/turns/advance`
+4. repeat turn advancement until verifying
+5. `POST /runs/{run_id}/verify`
+6. `POST /runs/{run_id}/finalize`
+7. `GET /runs/{run_id}/state`
+8. `GET /runs/{run_id}/outputs/latest`
 
 ## Supporting API areas
 
-- GET /runs
-- GET /runs/{run_id}
-- GET /runs/{run_id}/events
-- GET /runs/{run_id}/turns
-- GET /runs/{run_id}/tool-calls
-- GET /runs/{run_id}/plans/latest
-- GET /runs/{run_id}/verifications/latest
-- GET /runs/{run_id}/approvals
-- POST /runs/{run_id}/approvals
-- POST /runs/{run_id}/approvals/{approval_id}/decide
-- POST /runs/{run_id}/tasks
-- POST /runs/{run_id}/tasks/{task_id}/start
-- POST /runs/{run_id}/tasks/{task_id}/complete
-- POST /runs/{run_id}/evidence
+- `GET /runs`
+- `GET /runs/{run_id}`
+- `GET /runs/{run_id}/events`
+- `GET /runs/{run_id}/turns`
+- `GET /runs/{run_id}/tool-calls`
+- `GET /runs/{run_id}/llm-calls`
+- `GET /runs/{run_id}/plans/latest`
+- `GET /runs/{run_id}/verifications/latest`
+- `GET /runs/{run_id}/approvals`
+- `POST /runs/{run_id}/approvals`
+- `POST /runs/{run_id}/approvals/{approval_id}/decide`
+- `POST /runs/{run_id}/tasks`
+- `POST /runs/{run_id}/tasks/{task_id}/start`
+- `POST /runs/{run_id}/tasks/{task_id}/complete`
+- `POST /runs/{run_id}/evidence`
 
 ## Standard local commands
 
@@ -91,27 +112,29 @@ Memory mode:
 SQL mode:
     make smoke-sql
 
+Fake LLM mode:
+    make smoke-llm-fake
+
 ## Current limitations
 
-- deterministic runtime only
-- no external LLM provider execution yet
 - no Alembic migrations yet
 - no PostgreSQL deployment profile yet
 - no auth or RBAC
 - no frontend operator console
 - no observability stack
 - no distributed worker layer
+- provider coverage is still intentionally narrow
 
 ## Recommended next roadmap
 
 - add Alembic migrations
 - add PostgreSQL environment profile
-- add provider-backed planning and execution
-- add richer tool adapters
+- add richer provider policies
+- add LLM-backed planning
 - add authentication and authorization
 - add observability and tracing
 - add frontend operator console
 
 ## Release note
 
-This version is the first presentable backend MVP. It is suitable for demos, portfolio presentation, client walkthroughs, and the next production-hardening phase.
+This version is a presentable backend MVP with deterministic and provider-backed execution modes. It is suitable for demos, portfolio presentation, client walkthroughs, and the next production-hardening phase.
