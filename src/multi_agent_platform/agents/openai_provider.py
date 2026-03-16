@@ -67,10 +67,7 @@ class OpenAiCompatibleProvider:
         self._transport = transport or _post_json
 
     def generate_turn(self, request: LlmTurnRequest) -> LlmTurnResponse:
-        timeout_seconds = (
-            request.execution_profile.timeout_seconds
-            or self._request_timeout_seconds
-        )
+        timeout_seconds = request.execution_profile.timeout_seconds or self._request_timeout_seconds
         response_data = self._transport(
             f"{self._base_url}/chat/completions",
             {
@@ -159,9 +156,7 @@ class OpenAiCompatibleProvider:
             raise ValueError("OpenAI choice must include a message")
 
         raw_response_text = self._extract_response_text(message_payload.get("content"))
-        structured_output = StructuredTurnOutput.model_validate(
-            json.loads(raw_response_text)
-        )
+        structured_output = StructuredTurnOutput.model_validate(json.loads(raw_response_text))
         self._validate_tool_names(request, structured_output)
 
         model_name = response_data.get("model")
@@ -204,9 +199,7 @@ class OpenAiCompatibleProvider:
         completion_tokens_value = usage_payload.get("completion_tokens")
         total_tokens_value = usage_payload.get("total_tokens")
 
-        prompt_tokens: int = (
-            prompt_tokens_value if isinstance(prompt_tokens_value, int) else 0
-        )
+        prompt_tokens: int = prompt_tokens_value if isinstance(prompt_tokens_value, int) else 0
         completion_tokens: int = (
             completion_tokens_value if isinstance(completion_tokens_value, int) else 0
         )
@@ -233,6 +226,5 @@ class OpenAiCompatibleProvider:
         for planned_tool_call in structured_output.planned_tool_calls:
             if planned_tool_call.tool_name not in allowed_tool_names:
                 raise ValueError(
-                    "Unsupported tool name returned by provider: "
-                    f"{planned_tool_call.tool_name}"
+                    f"Unsupported tool name returned by provider: {planned_tool_call.tool_name}"
                 )

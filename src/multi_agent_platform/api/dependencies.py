@@ -57,23 +57,21 @@ _run_service: RunService | None = None
 
 
 def build_turn_executor(settings: Settings) -> TurnExecutor:
-    if settings.execution_backend == 'llm':
+    if settings.execution_backend == "llm":
         available_tool_names = list_available_tool_names()
         provider: LlmProvider
-        if settings.llm_provider_name == 'fake':
+        if settings.llm_provider_name == "fake":
             provider = FakeLlmProvider()
-        elif settings.llm_provider_name == 'openai':
+        elif settings.llm_provider_name == "openai":
             if settings.llm_api_key is None:
-                raise ValueError('LLM_API_KEY must be set for openai provider')
+                raise ValueError("LLM_API_KEY must be set for openai provider")
             provider = OpenAiCompatibleProvider(
                 api_key=settings.llm_api_key,
                 base_url=settings.llm_api_base_url,
                 default_model_name=settings.llm_model_name,
             )
         else:
-            raise ValueError(
-                f'Unsupported LLM provider {settings.llm_provider_name}'
-            )
+            raise ValueError(f"Unsupported LLM provider {settings.llm_provider_name}")
         return LlmTurnExecutor(
             providers={provider.provider_name: provider},
             available_tool_names=available_tool_names,
@@ -123,7 +121,7 @@ def get_run_service() -> RunService:
     global _run_service
     if _run_service is None:
         settings = get_settings()
-        if settings.storage_backend == 'sql':
+        if settings.storage_backend == "sql":
             _run_service = build_sql_run_service(settings)
         else:
             _run_service = build_memory_run_service(settings)
