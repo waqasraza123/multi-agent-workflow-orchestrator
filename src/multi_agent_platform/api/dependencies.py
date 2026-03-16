@@ -4,6 +4,7 @@ from multi_agent_platform.agents.executors import (
 )
 from multi_agent_platform.agents.fake_provider import FakeLlmProvider
 from multi_agent_platform.agents.llm_executor import LlmTurnExecutor
+from multi_agent_platform.agents.openai_provider import OpenAiCompatibleProvider
 from multi_agent_platform.application.runs import RunService
 from multi_agent_platform.config.settings import (
     Settings,
@@ -18,10 +19,18 @@ from multi_agent_platform.storage.db.session import (
 from multi_agent_platform.storage.llm_call_repository import (
     InMemoryLlmCallRepository,
 )
-from multi_agent_platform.storage.run_approval_repository import InMemoryRunApprovalRepository
-from multi_agent_platform.storage.run_event_repository import InMemoryRunEventRepository
-from multi_agent_platform.storage.run_output_repository import InMemoryRunOutputRepository
-from multi_agent_platform.storage.run_plan_repository import InMemoryRunPlanRepository
+from multi_agent_platform.storage.run_approval_repository import (
+    InMemoryRunApprovalRepository,
+)
+from multi_agent_platform.storage.run_event_repository import (
+    InMemoryRunEventRepository,
+)
+from multi_agent_platform.storage.run_output_repository import (
+    InMemoryRunOutputRepository,
+)
+from multi_agent_platform.storage.run_plan_repository import (
+    InMemoryRunPlanRepository,
+)
 from multi_agent_platform.storage.run_repository import InMemoryRunRepository
 from multi_agent_platform.storage.run_tool_call_repository import (
     InMemoryRunToolCallRepository,
@@ -48,13 +57,26 @@ _run_service: RunService | None = None
 
 def build_turn_executor(settings: Settings) -> TurnExecutor:
     if settings.execution_backend == "llm":
-        if settings.llm_provider_name != "fake":
-            raise ValueError(f"Unsupported LLM provider {settings.llm_provider_name}")
-        provider = FakeLlmProvider()
-        return LlmTurnExecutor(
-            providers={provider.provider_name: provider},
-            available_tool_names=list_available_tool_names(),
-        )
+        available_tool_names = list_available_tool_names()
+        if settings.llm_provider_name == "fake":
+            provider = FakeLlmProvider()
+            return LlmTurnExecutor(
+                providers={provider.provider_name: provider},
+                available_tool_names=available_tool_names,
+            )
+        if settings.llm_provider_name == "openai":
+            if settings.llm_api_key is None:
+                raise ValueError("LLM_API_KEY must be set for openai provider")
+            provider = OpenAiCompatibleProvider(
+                api_key=settings.llm_api_key,
+                base_url=settings.llm_api_base_url,
+                default_model_name=settings.llm_model_name,
+            )
+            return LlmTurnExecutor(
+                providers={provider.provider_name: provider},
+                available_tool_names=available_tool_names,
+            )
+        raise ValueError(f"Unsupported LLM provider {settings.llm_provider_name}")
     return DeterministicTurnExecutor()
 
 
