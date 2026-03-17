@@ -15,9 +15,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
+  release-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Check out repository
@@ -36,5 +36,5 @@ jobs:
       - name: Sync development dependencies
         run: uv sync --locked --group dev
 
-      - name: Run repository checks
-        run: make check
+      - name: Run full release gate
+        run: make release-check
