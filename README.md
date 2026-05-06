@@ -1,6 +1,6 @@
-# Multi-Agent Platform
+# Agent Runway
 
-Production-grade multi-agent research and execution platform with deterministic planning, provider-backed turn execution, tool calls, approvals, verification, final outputs, and switchable storage backends.
+AI workflow automation engine for auditable business processes, with deterministic planning, provider-backed turn execution, tool calls, approvals, verification, final outputs, and switchable storage backends.
 
 ## Current status
 

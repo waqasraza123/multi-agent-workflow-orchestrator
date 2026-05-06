@@ -6,7 +6,7 @@ v0.1.0
 
 ## Project overview
 
-Multi-Agent Platform is a backend-first multi-agent research and execution system. It turns a user goal into a persisted run, generates a deterministic plan, advances tasks through deterministic or provider-backed turns, executes deterministic tools, records evidence, supports approval workflows, verifies completion, and produces a final output.
+Agent Runway is a backend-first AI workflow automation system. It turns a business goal into a persisted run, generates a deterministic plan, advances tasks through deterministic or provider-backed turns, executes deterministic tools, records evidence, supports approval workflows, verifies completion, and produces a final output.
 
 ## Implemented scope
 

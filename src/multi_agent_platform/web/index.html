@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agent Runway</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <main class="workspace">
+      <section class="command-surface" aria-labelledby="workspace-title">
+        <div class="brand-row">
+          <div>
+            <p class="eyebrow">AI workflow automation</p>
+            <h1 id="workspace-title">Agent Runway</h1>
+          </div>
+          <div class="run-badge" id="runBadge">No active run</div>
+        </div>
+
+        <form class="intake-form" id="workflowForm">
+          <label for="goalInput">Client request</label>
+          <textarea
+            id="goalInput"
+            name="goal"
+            rows="6"
+            required
+          >Analyze three vendor proposals for a CRM migration, identify risks, compare tradeoffs, and recommend the best option for leadership review.</textarea>
+
+          <div class="control-grid">
+            <label class="field">
+              <span>Workflow</span>
+              <select id="workflowType" name="workflowType">
+                <option value="document_analysis">Document analysis</option>
+                <option value="research_report">Research report</option>
+                <option value="technical_plan">Technical plan</option>
+                <option value="assisted_action">Assisted action</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Approval</span>
+              <select id="approvalMode" name="approvalMode">
+                <option value="on_high_risk">On high risk</option>
+                <option value="always">Always</option>
+                <option value="never">Never</option>
+              </select>
+            </label>
+          </div>
+
+          <button class="primary-action" id="runButton" type="submit">
+            Start workflow
+          </button>
+        </form>
+      </section>
+
+      <section class="stage-map" aria-label="Workflow stages">
+        <article class="stage-card active" data-area="intake">
+          <span class="stage-index">01</span>
+          <h2>Intake</h2>
+          <p id="intakeStatus">Ready for a business request.</p>
+        </article>
+        <article class="stage-card" data-area="plan">
+          <span class="stage-index">02</span>
+          <h2>Plan</h2>
+          <p id="planStatus">Waiting for scope and task breakdown.</p>
+        </article>
+        <article class="stage-card" data-area="analysis">
+          <span class="stage-index">03</span>
+          <h2>Analysis</h2>
+          <p id="analysisStatus">Agents have not started.</p>
+        </article>
+        <article class="stage-card" data-area="evidence">
+          <span class="stage-index">04</span>
+          <h2>Evidence</h2>
+          <p id="evidenceStatus">No evidence recorded.</p>
+        </article>
+        <article class="stage-card" data-area="approval">
+          <span class="stage-index">05</span>
+          <h2>Approval</h2>
+          <p id="approvalStatus">No review checkpoint yet.</p>
+        </article>
+        <article class="stage-card" data-area="verification">
+          <span class="stage-index">06</span>
+          <h2>Verification</h2>
+          <p id="verificationStatus">Completion checks pending.</p>
+        </article>
+      </section>
+
+      <section class="insight-grid">
+        <article class="panel wide" data-area="plan">
+          <div class="panel-heading">
+            <p class="eyebrow">Task plan</p>
+            <h2>Work breakdown</h2>
+          </div>
+          <div class="task-list" id="taskList"></div>
+        </article>
+
+        <article class="panel" data-area="analysis">
+          <div class="panel-heading">
+            <p class="eyebrow">Agent turns</p>
+            <h2>Execution trace</h2>
+          </div>
+          <div class="timeline" id="turnTimeline"></div>
+        </article>
+
+        <article class="panel" data-area="evidence">
+          <div class="panel-heading">
+            <p class="eyebrow">Evidence</p>
+            <h2>Recorded findings</h2>
+          </div>
+          <div class="evidence-list" id="evidenceList"></div>
+        </article>
+
+        <article class="panel" data-area="output">
+          <div class="panel-heading">
+            <p class="eyebrow">Final output</p>
+            <h2>Client-ready result</h2>
+          </div>
+          <div class="output-card" id="outputCard">
+            <p class="muted">No final output yet.</p>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script src="/assets/app.js"></script>
+  </body>
+</html>
