@@ -109,6 +109,9 @@ class RunStateSnapshot(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     run_id: NonEmptyText
+    tenant_id: NonEmptyText = "tenant_default"
+    owner_user_id: NonEmptyText = "user_local"
+    created_by_user_id: NonEmptyText = "user_local"
     workflow_type: WorkflowType
     status: RunStatus
     user_goal: NonEmptyText

@@ -72,23 +72,28 @@ type EvidenceRecord struct {
 }
 
 type RunStateSnapshot struct {
-	RunID          string           `json:"run_id"`
-	WorkflowType   WorkflowType     `json:"workflow_type"`
-	Status         RunStatus        `json:"status"`
-	UserGoal       string           `json:"user_goal"`
-	CreatedAt      time.Time        `json:"created_at"`
-	UpdatedAt      time.Time        `json:"updated_at"`
-	Tasks          []TaskRecord     `json:"tasks"`
-	Evidence       []EvidenceRecord `json:"evidence"`
-	Constraints    RunConstraints   `json:"constraints"`
-	ApprovalPolicy ApprovalPolicy   `json:"approval_policy"`
-	CurrentTaskID  *string          `json:"current_task_id"`
-	FinalOutputRef *string          `json:"final_output_ref"`
-	FailureSummary *string          `json:"failure_summary"`
+	RunID           string           `json:"run_id"`
+	TenantID        string           `json:"tenant_id"`
+	OwnerUserID     string           `json:"owner_user_id"`
+	CreatedByUserID string           `json:"created_by_user_id"`
+	WorkflowType    WorkflowType     `json:"workflow_type"`
+	Status          RunStatus        `json:"status"`
+	UserGoal        string           `json:"user_goal"`
+	CreatedAt       time.Time        `json:"created_at"`
+	UpdatedAt       time.Time        `json:"updated_at"`
+	Tasks           []TaskRecord     `json:"tasks"`
+	Evidence        []EvidenceRecord `json:"evidence"`
+	Constraints     RunConstraints   `json:"constraints"`
+	ApprovalPolicy  ApprovalPolicy   `json:"approval_policy"`
+	CurrentTaskID   *string          `json:"current_task_id"`
+	FinalOutputRef  *string          `json:"final_output_ref"`
+	FailureSummary  *string          `json:"failure_summary"`
 }
 
 type RunSummary struct {
 	RunID              string       `json:"run_id"`
+	TenantID           string       `json:"tenant_id"`
+	OwnerUserID        string       `json:"owner_user_id"`
 	WorkflowType       WorkflowType `json:"workflow_type"`
 	Status             RunStatus    `json:"status"`
 	UserGoal           string       `json:"user_goal"`
@@ -102,6 +107,9 @@ type RunSummary struct {
 
 type RunDetail struct {
 	RunID              string         `json:"run_id"`
+	TenantID           string         `json:"tenant_id"`
+	OwnerUserID        string         `json:"owner_user_id"`
+	CreatedByUserID    string         `json:"created_by_user_id"`
 	WorkflowType       WorkflowType   `json:"workflow_type"`
 	Status             RunStatus      `json:"status"`
 	UserGoal           string         `json:"user_goal"`
@@ -277,6 +285,8 @@ func BuildRunListResponse(items []RunStateSnapshot, page PageInfo) RunListRespon
 func buildRunSummary(snapshot RunStateSnapshot) RunSummary {
 	return RunSummary{
 		RunID:              snapshot.RunID,
+		TenantID:           snapshot.TenantID,
+		OwnerUserID:        snapshot.OwnerUserID,
 		WorkflowType:       snapshot.WorkflowType,
 		Status:             snapshot.Status,
 		UserGoal:           snapshot.UserGoal,
@@ -293,6 +303,9 @@ func buildRunDetail(snapshot RunStateSnapshot) RunDetail {
 	summary := buildRunSummary(snapshot)
 	return RunDetail{
 		RunID:              summary.RunID,
+		TenantID:           summary.TenantID,
+		OwnerUserID:        summary.OwnerUserID,
+		CreatedByUserID:    snapshot.CreatedByUserID,
 		WorkflowType:       summary.WorkflowType,
 		Status:             summary.Status,
 		UserGoal:           summary.UserGoal,

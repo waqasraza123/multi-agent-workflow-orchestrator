@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from multi_agent_platform.contracts.common import utc_now
 from multi_agent_platform.contracts.llm_calls import (
     LlmCallListQuery,
     LlmCallPage,
@@ -44,6 +45,9 @@ from multi_agent_platform.storage.db.models import (
     RunToolCallRow,
     RunTurnRow,
     RunVerificationRow,
+    TenantMembershipRow,
+    TenantRow,
+    UserRow,
 )
 from multi_agent_platform.storage.llm_call_repository import LlmCallNotFoundError
 from multi_agent_platform.storage.run_approval_repository import RunApprovalNotFoundError
@@ -63,6 +67,17 @@ def _deserialize_model[T: BaseModel](model_type: type[T], payload: str) -> T:
     return model_type.model_validate_json(payload)
 
 
+def _deserialize_run_state(row: RunStateRow) -> RunStateSnapshot:
+    run_state = _deserialize_model(RunStateSnapshot, row.payload).model_copy(deep=True)
+    return run_state.model_copy(
+        update={
+            "tenant_id": row.tenant_id,
+            "owner_user_id": row.owner_user_id,
+            "created_by_user_id": row.created_by_user_id,
+        }
+    )
+
+
 def _build_page_info(total_count: int, limit: int, offset: int) -> PageInfo:
     return PageInfo(
         limit=limit,
@@ -70,6 +85,45 @@ def _build_page_info(total_count: int, limit: int, offset: int) -> PageInfo:
         total_count=total_count,
         has_more=offset + limit < total_count,
     )
+
+
+def _ensure_local_identity(session: Session, run_state: RunStateSnapshot) -> None:
+    now = utc_now()
+    tenant_id = run_state.tenant_id or "tenant_default"
+    owner_user_id = run_state.owner_user_id or "user_local"
+    created_by_user_id = run_state.created_by_user_id or owner_user_id
+    if session.get(TenantRow, tenant_id) is None:
+        session.add(
+            TenantRow(
+                tenant_id=tenant_id,
+                display_name="Default Tenant",
+                created_at=now,
+                updated_at=now,
+            )
+        )
+    for user_id in {owner_user_id, created_by_user_id}:
+        if session.get(UserRow, user_id) is not None:
+            continue
+        session.add(
+            UserRow(
+                user_id=user_id,
+                subject=user_id,
+                display_name=user_id,
+                token_fingerprint=None,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+    if session.get(TenantMembershipRow, (tenant_id, owner_user_id)) is None:
+        session.add(
+            TenantMembershipRow(
+                tenant_id=tenant_id,
+                user_id=owner_user_id,
+                role="admin",
+                created_at=now,
+                updated_at=now,
+            )
+        )
 
 
 class SqlAlchemyRunRepository:
@@ -81,9 +135,13 @@ class SqlAlchemyRunRepository:
             existing_row = session.get(RunStateRow, run_state.run_id)
             if existing_row is not None:
                 raise RunAlreadyExistsError(f"Run {run_state.run_id} already exists")
+            _ensure_local_identity(session, run_state)
             session.add(
                 RunStateRow(
                     run_id=run_state.run_id,
+                    tenant_id=run_state.tenant_id,
+                    owner_user_id=run_state.owner_user_id,
+                    created_by_user_id=run_state.created_by_user_id,
                     workflow_type=run_state.workflow_type.value,
                     status=run_state.status.value,
                     created_at=run_state.created_at,
@@ -99,10 +157,14 @@ class SqlAlchemyRunRepository:
             row = session.get(RunStateRow, run_state.run_id)
             if row is None:
                 raise RunNotFoundError(f"Run {run_state.run_id} does not exist")
+            _ensure_local_identity(session, run_state)
             row.workflow_type = run_state.workflow_type.value
             row.status = run_state.status.value
             row.created_at = run_state.created_at
             row.updated_at = run_state.updated_at
+            row.tenant_id = run_state.tenant_id
+            row.owner_user_id = run_state.owner_user_id
+            row.created_by_user_id = run_state.created_by_user_id
             row.payload = _serialize_model(run_state)
             session.commit()
         return run_state.model_copy(deep=True)
@@ -112,7 +174,7 @@ class SqlAlchemyRunRepository:
             row = session.get(RunStateRow, run_id)
             if row is None:
                 raise RunNotFoundError(f"Run {run_id} does not exist")
-            return _deserialize_model(RunStateSnapshot, row.payload).model_copy(deep=True)
+            return _deserialize_run_state(row)
 
     def list(self, query: RunListQuery) -> RunStatePage:
         with self._session_factory() as session:
@@ -133,8 +195,7 @@ class SqlAlchemyRunRepository:
             rows = session.scalars(ordered_stmt.offset(query.offset).limit(query.limit)).all()
             return RunStatePage(
                 items=[
-                    _deserialize_model(RunStateSnapshot, row.payload).model_copy(deep=True)
-                    for row in rows
+                    _deserialize_run_state(row) for row in rows
                 ],
                 page=_build_page_info(total_count, query.limit, query.offset),
             )

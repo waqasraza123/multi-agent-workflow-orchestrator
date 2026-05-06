@@ -16,6 +16,8 @@ class RunSummary(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     run_id: str
+    tenant_id: str
+    owner_user_id: str
     workflow_type: WorkflowType
     status: RunStatus
     user_goal: str
@@ -31,6 +33,9 @@ class RunDetail(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     run_id: str
+    tenant_id: str
+    owner_user_id: str
+    created_by_user_id: str
     workflow_type: WorkflowType
     status: RunStatus
     user_goal: str

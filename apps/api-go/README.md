@@ -6,6 +6,7 @@ Current responsibilities:
 
 - expose Go service health/readiness endpoints
 - enforce opt-in bearer-token RBAC for workflow endpoints
+- persist durable users, tenants, memberships, and run ownership
 - emit structured request logs with request IDs and trace context
 - own initial run creation and run reads
 - own deterministic plan generation
@@ -56,6 +57,8 @@ AUTH_MODE=disabled
 AUTH_VIEWER_TOKENS=
 AUTH_OPERATOR_TOKENS=
 AUTH_ADMIN_TOKENS=
+AUTH_DEFAULT_TENANT_ID=tenant_default
+AUTH_TOKEN_PRINCIPALS_JSON=
 ```
 
 Set `EXECUTION_BACKEND=llm` to call the private Python worker during `POST /runs/{run_id}/turns/advance`. Go still owns the final run state transition and database writes.
@@ -81,6 +84,8 @@ X-API-Key: <token>
 ```
 
 Role inheritance is `admin > operator > viewer`. Viewers can read runs and artifacts. Operators can mutate workflow state. Admins currently inherit every operator and viewer permission.
+
+When auth is enabled, each token resolves to a durable tenant/user principal. The Go API upserts the identity rows, stamps new runs with `tenant_id`, `owner_user_id`, and `created_by_user_id`, filters `GET /runs` to the caller's tenant, and returns `404` for cross-tenant run IDs. Configure `AUTH_TOKEN_PRINCIPALS_JSON` to map deployed tokens to stable tenant/user IDs.
 
 The API accepts or generates request correlation headers and echoes them on every response:
 
@@ -114,4 +119,4 @@ The current endpoints are:
 - `GET /runs/{run_id}/tool-calls`
 - `GET /runs/{run_id}/llm-calls`
 
-Finalization requires a run in `verifying`, a latest verification verdict of `pass`, and zero pending approvals. The next implementation step is durable user, tenant, and ownership records.
+Finalization requires a run in `verifying`, a latest verification verdict of `pass`, and zero pending approvals. The next implementation step is OpenTelemetry span export and durable request IDs on lifecycle events.

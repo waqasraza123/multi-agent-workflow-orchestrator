@@ -31,7 +31,7 @@ The Go service in `apps/api-go` currently owns:
 
 The Python FastAPI app remains the reference for endpoints that are not listed above.
 
-The Go service also owns opt-in API-boundary RBAC for the workflow endpoints. See `docs/go-auth-rbac.md`.
+The Go service also owns opt-in API-boundary RBAC, durable token-to-principal identity, and tenant-scoped run ownership for the workflow endpoints. See `docs/go-auth-rbac.md` and `docs/identity-ownership.md`.
 
 The Go service owns request correlation and structured HTTP logs for the workflow endpoints. See `docs/go-observability.md`.
 
@@ -52,6 +52,9 @@ Current Go state transitions:
 
 Go writes to the existing Alembic-managed tables:
 
+- `tenants`
+- `users`
+- `tenant_memberships`
 - `run_states`
 - `run_events`
 - `run_plans`
@@ -64,20 +67,28 @@ Go writes to the existing Alembic-managed tables:
 
 The tables continue to store full JSON payloads in the same model shape used by Python. Go also maintains indexed columns such as `status`, `workflow_type`, `created_at`, `task_id`, and `turn_id`.
 
+Run ownership is stored both in indexed `run_states` columns and in the run-state JSON payload:
+
+- `tenant_id`
+- `owner_user_id`
+- `created_by_user_id`
+
 Plan generation is persisted transactionally:
 
-1. insert `run_plans`
-2. update `run_states`
-3. append `plan_generated`
-4. append `tasks_registered`
+1. enforce the caller's tenant ownership on the run
+2. insert `run_plans`
+3. update `run_states`
+4. append `plan_generated`
+5. append `tasks_registered`
 
 Turn advancement is persisted transactionally:
 
-1. update `run_states`
-2. insert `run_tool_calls`
-3. insert `run_llm_calls` when `EXECUTION_BACKEND=llm`
-4. insert `run_turns`
-5. append `task_started`, `tool_executed`, `evidence_recorded`, `task_completed`, and `turn_executed`
+1. enforce the caller's tenant ownership on the run
+2. update `run_states`
+3. insert `run_tool_calls`
+4. insert `run_llm_calls` when `EXECUTION_BACKEND=llm`
+5. insert `run_turns`
+6. append `task_started`, `tool_executed`, `evidence_recorded`, `task_completed`, and `turn_executed`
 
 Approval requests are persisted transactionally:
 
@@ -136,11 +147,11 @@ Use `make hybrid-up` for local multi-service wiring with Postgres, Alembic migra
 
 Use `make api-go-dev` only after installing Go and running `go mod tidy` in `apps/api-go`.
 
-No Go-native migration system is introduced yet. Alembic remains the migration authority until the schema and Go control-plane ownership are stable.
+No Go-native migration runner is introduced yet. Alembic remains the migration authority. The Go SQL files mirror the schema shape for operators who manage the Go deployment path directly.
 
 ## Next Implementation Order
 
-1. Replace static auth tokens with durable user, tenant, and ownership records.
-2. Add OpenTelemetry span export and persist request IDs on durable run events.
-3. Add richer provider routing, budgets, and tenant-specific model policy.
+1. Add OpenTelemetry span export and persist request IDs on durable run events.
+2. Add richer provider routing, budgets, and tenant-specific model policy.
+3. Replace static token credentials with signed JWT validation.
 4. Port the remaining manual task/evidence mutation endpoints or intentionally deprecate them behind the Go workflow API.

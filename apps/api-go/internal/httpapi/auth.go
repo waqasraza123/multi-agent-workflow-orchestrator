@@ -1,9 +1,15 @@
 package httpapi
 
 import (
+	"context"
+	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/hex"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/waqasraza123/agent-runway/apps/api-go/internal/domain"
 )
 
 type accessRole int
@@ -13,6 +19,8 @@ const (
 	roleOperator
 	roleAdmin
 )
+
+type authIdentityContextKey struct{}
 
 func (handler Handler) requireRole(
 	requiredRole accessRole,
@@ -46,7 +54,20 @@ func (handler Handler) requireRole(
 			return
 		}
 
-		next(response, request)
+		identity := handler.identityForToken(token, role)
+		if err := identity.Validate(); err != nil {
+			writeError(response, http.StatusServiceUnavailable, "authentication token identity is not configured")
+			return
+		}
+		if handler.dependencies.Store != nil {
+			if err := handler.dependencies.Store.EnsureAuthIdentity(request.Context(), identity); err != nil {
+				handler.logError("persist auth identity failed", err)
+				writeError(response, http.StatusInternalServerError, "Failed to persist authentication identity")
+				return
+			}
+		}
+
+		next(response, request.WithContext(withAuthIdentity(request.Context(), identity)))
 	}
 }
 
@@ -75,6 +96,68 @@ func (handler Handler) roleForToken(token string) (accessRole, bool) {
 		return roleViewer, true
 	}
 	return 0, false
+}
+
+func (handler Handler) identityForToken(token string, role accessRole) domain.AuthIdentity {
+	fingerprint := tokenFingerprint(token)
+	for _, principal := range handler.dependencies.Settings.AuthTokenPrincipals {
+		if constantTimeStringEqual(token, principal.Token) {
+			subject := principal.Subject
+			if subject == "" {
+				subject = "static-token:" + fingerprint
+			}
+			return domain.AuthIdentity{
+				TenantID:         principal.TenantID,
+				UserID:           principal.UserID,
+				Subject:          subject,
+				DisplayName:      principal.DisplayName,
+				Role:             role.String(),
+				TokenFingerprint: fingerprint,
+				AuthenticatedAt:  time.Now().UTC(),
+			}
+		}
+	}
+
+	tenantID := strings.TrimSpace(handler.dependencies.Settings.AuthDefaultTenantID)
+	if tenantID == "" {
+		tenantID = "tenant_default"
+	}
+	return domain.AuthIdentity{
+		TenantID:         tenantID,
+		UserID:           "user_" + fingerprint[:32],
+		Subject:          "static-token:" + fingerprint,
+		DisplayName:      role.String() + " token " + fingerprint[:12],
+		Role:             role.String(),
+		TokenFingerprint: fingerprint,
+		AuthenticatedAt:  time.Now().UTC(),
+	}
+}
+
+func currentAuthIdentity(request *http.Request) (domain.AuthIdentity, bool) {
+	identity, ok := request.Context().Value(authIdentityContextKey{}).(domain.AuthIdentity)
+	return identity, ok
+}
+
+func withAuthIdentity(ctx context.Context, identity domain.AuthIdentity) context.Context {
+	return context.WithValue(ctx, authIdentityContextKey{}, identity)
+}
+
+func (role accessRole) String() string {
+	switch role {
+	case roleAdmin:
+		return "admin"
+	case roleOperator:
+		return "operator"
+	case roleViewer:
+		return "viewer"
+	default:
+		return "unknown"
+	}
+}
+
+func tokenFingerprint(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }
 
 func tokenMatchesAny(token string, candidates []string) bool {

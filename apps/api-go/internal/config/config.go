@@ -1,10 +1,19 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"strconv"
 	"strings"
 )
+
+type AuthTokenPrincipal struct {
+	Token       string `json:"token"`
+	UserID      string `json:"user_id"`
+	TenantID    string `json:"tenant_id"`
+	Subject     string `json:"subject"`
+	DisplayName string `json:"display_name"`
+}
 
 type Settings struct {
 	Host                     string
@@ -32,6 +41,8 @@ type Settings struct {
 	AuthViewerTokens         []string
 	AuthOperatorTokens       []string
 	AuthAdminTokens          []string
+	AuthDefaultTenantID      string
+	AuthTokenPrincipals      []AuthTokenPrincipal
 }
 
 func Load() Settings {
@@ -61,6 +72,8 @@ func Load() Settings {
 		AuthViewerTokens:         readCSV("AUTH_VIEWER_TOKENS"),
 		AuthOperatorTokens:       readCSV("AUTH_OPERATOR_TOKENS"),
 		AuthAdminTokens:          readCSV("AUTH_ADMIN_TOKENS"),
+		AuthDefaultTenantID:      readEnv("AUTH_DEFAULT_TENANT_ID", "tenant_default"),
+		AuthTokenPrincipals:      readAuthTokenPrincipals("AUTH_TOKEN_PRINCIPALS_JSON"),
 	}
 }
 
@@ -151,4 +164,27 @@ func readOptionalFloat(name string) *float64 {
 		return nil
 	}
 	return &parsed
+}
+
+func readAuthTokenPrincipals(name string) []AuthTokenPrincipal {
+	value := strings.TrimSpace(os.Getenv(name))
+	if value == "" {
+		return []AuthTokenPrincipal{}
+	}
+	var principals []AuthTokenPrincipal
+	if err := json.Unmarshal([]byte(value), &principals); err != nil {
+		return []AuthTokenPrincipal{}
+	}
+	normalized := make([]AuthTokenPrincipal, 0, len(principals))
+	for _, principal := range principals {
+		principal.Token = strings.TrimSpace(principal.Token)
+		principal.UserID = strings.TrimSpace(principal.UserID)
+		principal.TenantID = strings.TrimSpace(principal.TenantID)
+		principal.Subject = strings.TrimSpace(principal.Subject)
+		principal.DisplayName = strings.TrimSpace(principal.DisplayName)
+		if principal.Token != "" && principal.UserID != "" && principal.TenantID != "" {
+			normalized = append(normalized, principal)
+		}
+	}
+	return normalized
 }

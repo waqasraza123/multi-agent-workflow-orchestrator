@@ -126,7 +126,7 @@ The Go control plane currently owns:
 
 The remaining workflow endpoints continue to use the Python FastAPI app as the reference implementation until they are ported. In `PLANNING_BACKEND=llm` mode, Go calls the private Python worker for plan generation, validates the returned tasks, and persists the plan itself. In `EXECUTION_BACKEND=llm` mode, Go calls the private Python worker for turn execution and then persists the resulting state, turn, tool-call, evidence, event, and LLM-call records itself. Go also owns approval checkpoints, verifies completed runs, enforces the finalization gate, writes final outputs, and records lifecycle events. If the worker is unavailable, Go can fall back to deterministic planning or execution according to the configured fallback policy.
 
-The Go control plane supports opt-in RBAC with bearer or `X-API-Key` tokens. `GET /health` and `GET /ready` remain public for platform probes; workflow endpoints require viewer, operator, or admin access when `AUTH_MODE` is enabled.
+The Go control plane supports opt-in RBAC with bearer or `X-API-Key` tokens. `GET /health` and `GET /ready` remain public for platform probes; workflow endpoints require viewer, operator, or admin access when `AUTH_MODE` is enabled. Authenticated tokens resolve to durable user and tenant records, and Go enforces tenant ownership on run lists, reads, and mutations.
 
 The Go control plane also emits structured request logs and propagates `X-Request-ID` plus `traceparent` to the Python worker so API and worker logs can be correlated for a single execution turn.
 
@@ -245,9 +245,13 @@ AUTH_MODE=api_key
 AUTH_VIEWER_TOKENS=<comma-separated-read-tokens>
 AUTH_OPERATOR_TOKENS=<comma-separated-write-tokens>
 AUTH_ADMIN_TOKENS=<comma-separated-admin-tokens>
+AUTH_DEFAULT_TENANT_ID=tenant_default
+AUTH_TOKEN_PRINCIPALS_JSON='[{"token":"operator-token","tenant_id":"tenant_acme","user_id":"user_alice","subject":"user:alice@example.com"}]'
 ```
 
 Use `AUTH_MODE=bearer` or `AUTH_MODE=api_key` outside local development. Clients can authenticate with `Authorization: Bearer <token>` or `X-API-Key: <token>`.
+
+`AUTH_TOKEN_PRINCIPALS_JSON` is optional but recommended in deployed environments so each token maps to a stable tenant/user identity. The token must still be present in one of the role token lists.
 
 ## Deploy On Render
 
@@ -339,7 +343,7 @@ make smoke-llm-fake
 
 Agent Runway is backend-MVP ready for demos, architecture walkthroughs, portfolio presentation, and further hardening.
 
-The next production upgrades are durable user/tenant ownership, OpenTelemetry export, and a fuller operator console.
+The next production upgrades are OpenTelemetry export, provider routing with budget policy, signed JWT validation, and a fuller operator console.
 
 ## License
 

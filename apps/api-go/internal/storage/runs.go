@@ -17,6 +17,7 @@ type RunListQuery struct {
 	Offset       int
 	Status       *domain.RunStatus
 	WorkflowType *domain.WorkflowType
+	TenantID     *string
 }
 
 func (store *Store) CreateRunState(
@@ -33,6 +34,8 @@ func (store *Store) CreateRunState(
 		map[string]any{
 			"workflow_type": string(snapshot.WorkflowType),
 			"status":        string(snapshot.Status),
+			"tenant_id":     snapshot.TenantID,
+			"owner_user_id": snapshot.OwnerUserID,
 		},
 	)
 	if err != nil {
@@ -51,13 +54,19 @@ func (store *Store) CreateRunState(
 		ctx,
 		`insert into run_states (
 			run_id,
+			tenant_id,
+			owner_user_id,
+			created_by_user_id,
 			workflow_type,
 			status,
 			created_at,
 			updated_at,
 			payload
-		) values ($1, $2, $3, $4, $5, $6)`,
+		) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		snapshot.RunID,
+		snapshot.TenantID,
+		snapshot.OwnerUserID,
+		snapshot.CreatedByUserID,
 		string(snapshot.WorkflowType),
 		string(snapshot.Status),
 		snapshot.CreatedAt,
@@ -83,18 +92,23 @@ func (store *Store) GetRunState(
 	runID string,
 ) (domain.RunStateSnapshot, error) {
 	var payload string
+	var tenantID string
+	var ownerUserID string
+	var createdByUserID string
 	err := store.pool.QueryRow(
 		ctx,
-		`select payload from run_states where run_id = $1`,
+		`select payload, tenant_id, owner_user_id, created_by_user_id
+		from run_states
+		where run_id = $1`,
 		runID,
-	).Scan(&payload)
+	).Scan(&payload, &tenantID, &ownerUserID, &createdByUserID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.RunStateSnapshot{}, ErrRunNotFound
 	}
 	if err != nil {
 		return domain.RunStateSnapshot{}, err
 	}
-	return decodeRunState(payload)
+	return decodeRunStateWithOwnership(payload, tenantID, ownerUserID, createdByUserID)
 }
 
 func (store *Store) ListRunStates(
@@ -111,6 +125,11 @@ func (store *Store) ListRunStates(
 		value := string(*query.WorkflowType)
 		workflowType = &value
 	}
+	var tenantID *string
+	if query.TenantID != nil {
+		value := *query.TenantID
+		tenantID = &value
+	}
 
 	var totalCount int
 	if err := store.pool.QueryRow(
@@ -118,25 +137,29 @@ func (store *Store) ListRunStates(
 		`select count(*)
 		from run_states
 		where ($1::text is null or status = $1)
-			and ($2::text is null or workflow_type = $2)`,
+			and ($2::text is null or workflow_type = $2)
+			and ($3::text is null or tenant_id = $3)`,
 		status,
 		workflowType,
+		tenantID,
 	).Scan(&totalCount); err != nil {
 		return nil, domain.PageInfo{}, err
 	}
 
 	rows, err := store.pool.Query(
 		ctx,
-		`select payload
+		`select payload, tenant_id, owner_user_id, created_by_user_id
 		from run_states
 		where ($3::text is null or status = $3)
 			and ($4::text is null or workflow_type = $4)
+			and ($5::text is null or tenant_id = $5)
 		order by created_at desc, run_id desc
 		limit $1 offset $2`,
 		query.Limit,
 		query.Offset,
 		status,
 		workflowType,
+		tenantID,
 	)
 	if err != nil {
 		return nil, domain.PageInfo{}, err
@@ -146,10 +169,13 @@ func (store *Store) ListRunStates(
 	items := make([]domain.RunStateSnapshot, 0)
 	for rows.Next() {
 		var payload string
-		if err := rows.Scan(&payload); err != nil {
+		var tenantID string
+		var ownerUserID string
+		var createdByUserID string
+		if err := rows.Scan(&payload, &tenantID, &ownerUserID, &createdByUserID); err != nil {
 			return nil, domain.PageInfo{}, err
 		}
-		item, err := decodeRunState(payload)
+		item, err := decodeRunStateWithOwnership(payload, tenantID, ownerUserID, createdByUserID)
 		if err != nil {
 			return nil, domain.PageInfo{}, err
 		}
@@ -176,6 +202,22 @@ func decodeRunState(payload string) (domain.RunStateSnapshot, error) {
 	return snapshot, nil
 }
 
+func decodeRunStateWithOwnership(
+	payload string,
+	tenantID string,
+	ownerUserID string,
+	createdByUserID string,
+) (domain.RunStateSnapshot, error) {
+	snapshot, err := decodeRunState(payload)
+	if err != nil {
+		return domain.RunStateSnapshot{}, err
+	}
+	snapshot.TenantID = tenantID
+	snapshot.OwnerUserID = ownerUserID
+	snapshot.CreatedByUserID = createdByUserID
+	return snapshot, nil
+}
+
 func updateRunStateInTx(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -192,7 +234,10 @@ func updateRunStateInTx(
 			status = $3,
 			created_at = $4,
 			updated_at = $5,
-			payload = $6
+			payload = $6,
+			tenant_id = $7,
+			owner_user_id = $8,
+			created_by_user_id = $9
 		where run_id = $1`,
 		snapshot.RunID,
 		string(snapshot.WorkflowType),
@@ -200,6 +245,9 @@ func updateRunStateInTx(
 		snapshot.CreatedAt,
 		snapshot.UpdatedAt,
 		string(payload),
+		snapshot.TenantID,
+		snapshot.OwnerUserID,
+		snapshot.CreatedByUserID,
 	)
 	return err
 }

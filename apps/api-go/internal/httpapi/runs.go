@@ -30,6 +30,17 @@ func (handler Handler) CreateRun(response http.ResponseWriter, request *http.Req
 		writeError(response, http.StatusBadRequest, err.Error())
 		return
 	}
+	identity := handler.identityForRequest(request)
+	if err := identity.Validate(); err != nil {
+		writeError(response, http.StatusServiceUnavailable, "run owner identity is not configured")
+		return
+	}
+	if err := handler.dependencies.Store.EnsureAuthIdentity(request.Context(), identity); err != nil {
+		handler.logError("persist run owner identity failed", err)
+		writeError(response, http.StatusInternalServerError, "Failed to persist run owner identity")
+		return
+	}
+	snapshot.ApplyOwnership(identity)
 	createdSnapshot, err := handler.dependencies.Store.CreateRunState(request.Context(), snapshot)
 	if err != nil {
 		handler.logError("create run failed", err)
@@ -49,6 +60,14 @@ func (handler Handler) ListRuns(response http.ResponseWriter, request *http.Requ
 	query, ok := parseRunListQuery(response, request)
 	if !ok {
 		return
+	}
+	if handler.dependencies.Settings.AuthEnabled() {
+		identity, ok := currentAuthIdentity(request)
+		if !ok {
+			writeError(response, http.StatusUnauthorized, "authentication identity is required")
+			return
+		}
+		query.TenantID = &identity.TenantID
 	}
 	items, page, err := handler.dependencies.Store.ListRunStates(request.Context(), query)
 	if err != nil {
@@ -101,7 +120,32 @@ func (handler Handler) getRunState(
 		writeError(response, http.StatusInternalServerError, "Failed to get run")
 		return domain.RunStateSnapshot{}, false
 	}
+	if !handler.canAccessRun(request, snapshot) {
+		writeError(response, http.StatusNotFound, "Run "+runID+" does not exist")
+		return domain.RunStateSnapshot{}, false
+	}
 	return snapshot, true
+}
+
+func (handler Handler) identityForRequest(request *http.Request) domain.AuthIdentity {
+	if identity, ok := currentAuthIdentity(request); ok {
+		return identity
+	}
+	return domain.LocalAuthIdentity(handler.dependencies.Settings.AuthDefaultTenantID)
+}
+
+func (handler Handler) canAccessRun(request *http.Request, snapshot domain.RunStateSnapshot) bool {
+	if !handler.dependencies.Settings.AuthEnabled() {
+		return true
+	}
+	identity, ok := currentAuthIdentity(request)
+	if !ok {
+		return false
+	}
+	if snapshot.TenantID == "" {
+		return false
+	}
+	return snapshot.TenantID == identity.TenantID
 }
 
 func parseRunListQuery(

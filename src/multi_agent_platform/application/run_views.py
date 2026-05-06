@@ -12,6 +12,8 @@ from multi_agent_platform.contracts.runs import RunStateSnapshot, TaskStatus
 def build_run_summary(run_state: RunStateSnapshot) -> RunSummary:
     return RunSummary(
         run_id=run_state.run_id,
+        tenant_id=run_state.tenant_id,
+        owner_user_id=run_state.owner_user_id,
         workflow_type=run_state.workflow_type,
         status=run_state.status,
         user_goal=run_state.user_goal,
@@ -27,6 +29,9 @@ def build_run_summary(run_state: RunStateSnapshot) -> RunSummary:
 def build_run_detail(run_state: RunStateSnapshot) -> RunDetail:
     return RunDetail(
         run_id=run_state.run_id,
+        tenant_id=run_state.tenant_id,
+        owner_user_id=run_state.owner_user_id,
+        created_by_user_id=run_state.created_by_user_id,
         workflow_type=run_state.workflow_type,
         status=run_state.status,
         user_goal=run_state.user_goal,
