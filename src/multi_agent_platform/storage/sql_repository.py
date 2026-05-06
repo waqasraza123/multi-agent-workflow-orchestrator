@@ -78,6 +78,16 @@ def _deserialize_run_state(row: RunStateRow) -> RunStateSnapshot:
     )
 
 
+def _deserialize_run_event(row: RunEventRow) -> RunEventRecord:
+    event_record = _deserialize_model(RunEventRecord, row.payload).model_copy(deep=True)
+    return event_record.model_copy(
+        update={
+            "request_id": row.request_id or None,
+            "traceparent": row.traceparent or None,
+        }
+    )
+
+
 def _build_page_info(total_count: int, limit: int, offset: int) -> PageInfo:
     return PageInfo(
         limit=limit,
@@ -213,6 +223,8 @@ class SqlAlchemyRunEventRepository:
                     run_id=event_record.run_id,
                     event_type=event_record.event_type.value,
                     occurred_at=event_record.occurred_at,
+                    request_id=event_record.request_id or "",
+                    traceparent=event_record.traceparent or "",
                     payload=_serialize_model(event_record),
                 )
             )
@@ -232,8 +244,7 @@ class SqlAlchemyRunEventRepository:
             rows = session.scalars(ordered_stmt.offset(query.offset).limit(query.limit)).all()
             return RunEventPage(
                 items=[
-                    _deserialize_model(RunEventRecord, row.payload).model_copy(deep=True)
-                    for row in rows
+                    _deserialize_run_event(row) for row in rows
                 ],
                 page=_build_page_info(total_count, query.limit, query.offset),
             )

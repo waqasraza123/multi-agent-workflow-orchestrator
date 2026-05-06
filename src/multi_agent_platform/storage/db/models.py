@@ -84,6 +84,8 @@ class RunEventRow(Base):
     run_id: Mapped[str] = mapped_column(String(64), index=True)
     event_type: Mapped[str] = mapped_column(String(64), index=True)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    request_id: Mapped[str] = mapped_column(String(96), index=True, default="")
+    traceparent: Mapped[str] = mapped_column(String(128), index=True, default="")
     payload: Mapped[str] = mapped_column(Text)
 
 

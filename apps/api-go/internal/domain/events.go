@@ -20,11 +20,13 @@ const (
 )
 
 type RunEventRecord struct {
-	EventID    string         `json:"event_id"`
-	RunID      string         `json:"run_id"`
-	EventType  RunEventType   `json:"event_type"`
-	OccurredAt time.Time      `json:"occurred_at"`
-	Payload    map[string]any `json:"payload"`
+	EventID     string         `json:"event_id"`
+	RunID       string         `json:"run_id"`
+	EventType   RunEventType   `json:"event_type"`
+	OccurredAt  time.Time      `json:"occurred_at"`
+	RequestID   string         `json:"request_id,omitempty"`
+	Traceparent string         `json:"traceparent,omitempty"`
+	Payload     map[string]any `json:"payload"`
 }
 
 func NewRunEvent(runID string, eventType RunEventType, payload map[string]any) (RunEventRecord, error) {

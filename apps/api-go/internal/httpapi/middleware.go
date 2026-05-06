@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/waqasraza123/agent-runway/apps/api-go/internal/observability"
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/requestmeta"
 )
 
@@ -46,10 +47,15 @@ func (handler Handler) requestMiddleware(next http.Handler) http.Handler {
 		if requestID == "" {
 			requestID = newRequestID()
 		}
-		traceparent := normalizeHeaderValue(request.Header.Get(traceparentHeader))
-		if traceparent == "" {
-			traceparent = newTraceparent()
+		traceID, parentSpanID, ok := observability.ParseTraceparent(
+			normalizeHeaderValue(request.Header.Get(traceparentHeader)),
+		)
+		if !ok {
+			traceID = randomHex(16)
+			parentSpanID = ""
 		}
+		spanID := randomHex(8)
+		traceparent := observability.FormatTraceparent(traceID, spanID)
 
 		response.Header().Set(requestIDHeader, requestID)
 		response.Header().Set(traceparentHeader, traceparent)
@@ -83,6 +89,26 @@ func (handler Handler) requestMiddleware(next http.Handler) http.Handler {
 				"user_agent", request.UserAgent(),
 			)
 		}
+		if handler.dependencies.TraceExporter != nil {
+			handler.dependencies.TraceExporter.Export(observability.Span{
+				Name:         "HTTP " + request.Method + " " + request.URL.Path,
+				TraceID:      traceID,
+				SpanID:       spanID,
+				ParentSpanID: parentSpanID,
+				StartTime:    startedAt,
+				EndTime:      time.Now(),
+				StatusCode:   statusCode,
+				Attributes: map[string]any{
+					"http.request.method":       request.Method,
+					"url.path":                  request.URL.Path,
+					"http.response.status_code": statusCode,
+					"http.response.body.size":   capturingWriter.bytes,
+					"user_agent.original":       request.UserAgent(),
+					"client.address":            request.RemoteAddr,
+					"request.id":                requestID,
+				},
+			})
+		}
 	})
 }
 
@@ -94,14 +120,15 @@ func newRequestID() string {
 	return "req_" + randomHex(16)
 }
 
-func newTraceparent() string {
-	return "00-" + randomHex(16) + "-" + randomHex(8) + "-01"
-}
-
 func randomHex(byteCount int) string {
 	buffer := make([]byte, byteCount)
 	if _, err := rand.Read(buffer); err != nil {
-		return strconv.FormatInt(time.Now().UnixNano(), 16)
+		fallback := strconv.FormatInt(time.Now().UnixNano(), 16)
+		requiredLength := byteCount * 2
+		if len(fallback) >= requiredLength {
+			return fallback[:requiredLength]
+		}
+		return strings.Repeat("0", requiredLength-len(fallback)) + fallback
 	}
 	return hex.EncodeToString(buffer)
 }

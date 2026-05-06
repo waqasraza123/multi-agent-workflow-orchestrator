@@ -8,6 +8,7 @@ Current responsibilities:
 - enforce opt-in bearer-token RBAC for workflow endpoints
 - persist durable users, tenants, memberships, and run ownership
 - emit structured request logs with request IDs and trace context
+- export OTLP/HTTP server spans when configured
 - own initial run creation and run reads
 - own deterministic plan generation
 - own deterministic and worker-backed LLM turn advancement
@@ -59,6 +60,13 @@ AUTH_OPERATOR_TOKENS=
 AUTH_ADMIN_TOKENS=
 AUTH_DEFAULT_TENANT_ID=tenant_default
 AUTH_TOKEN_PRINCIPALS_JSON=
+OTEL_SERVICE_NAME=agent-runway-api-go
+OTEL_RESOURCE_ENVIRONMENT=local
+OTEL_EXPORTER_OTLP_ENDPOINT=
+OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=
+OTEL_EXPORTER_OTLP_HEADERS=
+OTEL_EXPORTER_OTLP_TIMEOUT_SECONDS=2
+OTEL_EXPORTER_OTLP_QUEUE_SIZE=256
 ```
 
 Set `EXECUTION_BACKEND=llm` to call the private Python worker during `POST /runs/{run_id}/turns/advance`. Go still owns the final run state transition and database writes.
@@ -94,7 +102,9 @@ X-Request-ID: req_<32-hex-chars>
 traceparent: 00-<32-hex-trace-id>-<16-hex-span-id>-01
 ```
 
-Every request emits a structured `http_request` log with request ID, traceparent, method, path, status, bytes, duration, remote address, and user agent. Calls to the Python worker forward the same headers.
+Every request emits a structured `http_request` log with request ID, traceparent, method, path, status, bytes, duration, remote address, and user agent. Calls to the Python worker forward the same headers. Go-created run events persist `request_id` and `traceparent` so lifecycle rows can be joined back to API logs and traces.
+
+Set `OTEL_EXPORTER_OTLP_ENDPOINT` or `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` to export server spans to an OpenTelemetry collector over OTLP/HTTP JSON. Export is asynchronous and drops spans instead of blocking request handling when the queue is full.
 
 The current endpoints are:
 
@@ -119,4 +129,4 @@ The current endpoints are:
 - `GET /runs/{run_id}/tool-calls`
 - `GET /runs/{run_id}/llm-calls`
 
-Finalization requires a run in `verifying`, a latest verification verdict of `pass`, and zero pending approvals. The next implementation step is OpenTelemetry span export and durable request IDs on lifecycle events.
+Finalization requires a run in `verifying`, a latest verification verdict of `pass`, and zero pending approvals. The next implementation step is provider routing, budget controls, and tenant-specific model policy.

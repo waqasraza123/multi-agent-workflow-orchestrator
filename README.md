@@ -128,7 +128,7 @@ The remaining workflow endpoints continue to use the Python FastAPI app as the r
 
 The Go control plane supports opt-in RBAC with bearer or `X-API-Key` tokens. `GET /health` and `GET /ready` remain public for platform probes; workflow endpoints require viewer, operator, or admin access when `AUTH_MODE` is enabled. Authenticated tokens resolve to durable user and tenant records, and Go enforces tenant ownership on run lists, reads, and mutations.
 
-The Go control plane also emits structured request logs and propagates `X-Request-ID` plus `traceparent` to the Python worker so API and worker logs can be correlated for a single execution turn.
+The Go control plane also emits structured request logs, persists `X-Request-ID` plus `traceparent` on run events, propagates both headers to the Python worker, and can export OTLP/HTTP server spans to an OpenTelemetry collector.
 
 Run the Python worker locally:
 
@@ -253,6 +253,19 @@ Use `AUTH_MODE=bearer` or `AUTH_MODE=api_key` outside local development. Clients
 
 `AUTH_TOKEN_PRINCIPALS_JSON` is optional but recommended in deployed environments so each token maps to a stable tenant/user identity. The token must still be present in one of the role token lists.
 
+Go API observability:
+
+```bash
+OTEL_SERVICE_NAME=agent-runway-api-go
+OTEL_RESOURCE_ENVIRONMENT=production
+OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+OTEL_EXPORTER_OTLP_HEADERS=
+OTEL_EXPORTER_OTLP_TIMEOUT_SECONDS=2
+OTEL_EXPORTER_OTLP_QUEUE_SIZE=256
+```
+
+Set `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` instead of `OTEL_EXPORTER_OTLP_ENDPOINT` when your collector exposes a custom traces path.
+
 ## Deploy On Render
 
 Use Render as a Python web service.
@@ -343,7 +356,7 @@ make smoke-llm-fake
 
 Agent Runway is backend-MVP ready for demos, architecture walkthroughs, portfolio presentation, and further hardening.
 
-The next production upgrades are OpenTelemetry export, provider routing with budget policy, signed JWT validation, and a fuller operator console.
+The next production upgrades are provider routing with budget policy, signed JWT validation, worker-side spans, and a fuller operator console.
 
 ## License
 

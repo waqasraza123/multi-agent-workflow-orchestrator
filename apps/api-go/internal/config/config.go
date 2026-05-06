@@ -43,6 +43,12 @@ type Settings struct {
 	AuthAdminTokens          []string
 	AuthDefaultTenantID      string
 	AuthTokenPrincipals      []AuthTokenPrincipal
+	OTLPTracesEndpoint       string
+	OTLPHeaders              map[string]string
+	OTLPTimeoutSeconds       float64
+	OTLPQueueSize            int
+	ServiceName              string
+	ServiceEnvironment       string
 }
 
 func Load() Settings {
@@ -74,6 +80,12 @@ func Load() Settings {
 		AuthAdminTokens:          readCSV("AUTH_ADMIN_TOKENS"),
 		AuthDefaultTenantID:      readEnv("AUTH_DEFAULT_TENANT_ID", "tenant_default"),
 		AuthTokenPrincipals:      readAuthTokenPrincipals("AUTH_TOKEN_PRINCIPALS_JSON"),
+		OTLPTracesEndpoint:       readOTLPTracesEndpoint(),
+		OTLPHeaders:              readKeyValueCSV("OTEL_EXPORTER_OTLP_HEADERS"),
+		OTLPTimeoutSeconds:       readFloat("OTEL_EXPORTER_OTLP_TIMEOUT_SECONDS", 2),
+		OTLPQueueSize:            readInt("OTEL_EXPORTER_OTLP_QUEUE_SIZE", 256),
+		ServiceName:              readEnv("OTEL_SERVICE_NAME", "agent-runway-api-go"),
+		ServiceEnvironment:       readEnv("OTEL_RESOURCE_ENVIRONMENT", readEnv("DEPLOY_ENVIRONMENT", "local")),
 	}
 }
 
@@ -164,6 +176,49 @@ func readOptionalFloat(name string) *float64 {
 		return nil
 	}
 	return &parsed
+}
+
+func readFloat(name string, fallback float64) float64 {
+	value := os.Getenv(name)
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return fallback
+	}
+	return parsed
+}
+
+func readKeyValueCSV(name string) map[string]string {
+	value := strings.TrimSpace(os.Getenv(name))
+	if value == "" {
+		return map[string]string{}
+	}
+	items := map[string]string{}
+	for _, part := range strings.Split(value, ",") {
+		key, itemValue, ok := strings.Cut(part, "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		itemValue = strings.TrimSpace(itemValue)
+		if key != "" && itemValue != "" {
+			items[key] = itemValue
+		}
+	}
+	return items
+}
+
+func readOTLPTracesEndpoint() string {
+	if value := strings.TrimSpace(os.Getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")); value != "" {
+		return value
+	}
+	endpoint := strings.TrimRight(strings.TrimSpace(os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")), "/")
+	if endpoint == "" {
+		return ""
+	}
+	return endpoint + "/v1/traces"
 }
 
 func readAuthTokenPrincipals(name string) []AuthTokenPrincipal {

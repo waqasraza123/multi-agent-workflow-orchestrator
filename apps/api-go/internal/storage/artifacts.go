@@ -26,7 +26,7 @@ func (store *Store) ListRunEvents(
 
 	rows, err := store.pool.Query(
 		ctx,
-		`select payload
+		`select payload, request_id, traceparent
 		from run_events
 		where run_id = $1
 		order by occurred_at desc, event_id desc
@@ -43,13 +43,17 @@ func (store *Store) ListRunEvents(
 	items := make([]domain.RunEventRecord, 0)
 	for rows.Next() {
 		var payload string
-		if err := rows.Scan(&payload); err != nil {
+		var requestID string
+		var traceparent string
+		if err := rows.Scan(&payload, &requestID, &traceparent); err != nil {
 			return nil, domain.PageInfo{}, err
 		}
 		var item domain.RunEventRecord
 		if err := json.Unmarshal([]byte(payload), &item); err != nil {
 			return nil, domain.PageInfo{}, err
 		}
+		item.RequestID = requestID
+		item.Traceparent = traceparent
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {

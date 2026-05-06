@@ -30,6 +30,8 @@ class RunEventRecord(BaseModel):
     run_id: str
     event_type: RunEventType
     occurred_at: datetime = Field(default_factory=utc_now)
+    request_id: str | None = None
+    traceparent: str | None = None
     payload: dict[str, Any] = Field(default_factory=dict)
 
 

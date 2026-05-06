@@ -33,7 +33,7 @@ The Python FastAPI app remains the reference for endpoints that are not listed a
 
 The Go service also owns opt-in API-boundary RBAC, durable token-to-principal identity, and tenant-scoped run ownership for the workflow endpoints. See `docs/go-auth-rbac.md` and `docs/identity-ownership.md`.
 
-The Go service owns request correlation and structured HTTP logs for the workflow endpoints. See `docs/go-observability.md`.
+The Go service owns request correlation, structured HTTP logs, durable event correlation metadata, and optional OTLP/HTTP server span export for the workflow endpoints. See `docs/go-observability.md`.
 
 ## State Ownership
 
@@ -65,7 +65,7 @@ Go writes to the existing Alembic-managed tables:
 - `run_verifications`
 - `run_outputs`
 
-The tables continue to store full JSON payloads in the same model shape used by Python. Go also maintains indexed columns such as `status`, `workflow_type`, `created_at`, `task_id`, and `turn_id`.
+The tables continue to store full JSON payloads in the same model shape used by Python. Go also maintains indexed columns such as `status`, `workflow_type`, `created_at`, `task_id`, `turn_id`, `request_id`, and `traceparent`.
 
 Run ownership is stored both in indexed `run_states` columns and in the run-state JSON payload:
 
@@ -111,6 +111,11 @@ Finalization is persisted transactionally:
 2. update `run_states` to `completed` with `final_output_ref`
 3. append `run_finalized`
 
+Every Go-created event is stamped with the request metadata from the API boundary before insert:
+
+- `request_id`
+- `traceparent`
+
 ## Deterministic Execution
 
 The first Go execution path intentionally matches the existing Python deterministic behavior:
@@ -139,7 +144,7 @@ Go selects worker-backed LLM planning when `PLANNING_BACKEND=llm`. The Python wo
 
 If the Python worker is unreachable or returns a transport-level error, Go falls back to deterministic turn execution and still persists an LLM-call record with `fallback_used=true` and the error message. This keeps the run advancing while preserving the failed LLM execution attempt for audit.
 
-Go forwards `X-Request-ID` and `traceparent` to the worker. The worker echoes both headers and logs them with its request record.
+Go forwards `X-Request-ID` and `traceparent` to the worker. The worker echoes both headers and logs them with its request record. When OTLP export is enabled, Go also exports an HTTP server span for the public API request.
 
 ## Operational Notes
 
@@ -151,7 +156,7 @@ No Go-native migration runner is introduced yet. Alembic remains the migration a
 
 ## Next Implementation Order
 
-1. Add OpenTelemetry span export and persist request IDs on durable run events.
-2. Add richer provider routing, budgets, and tenant-specific model policy.
+1. Add richer provider routing, budgets, and tenant-specific model policy.
+2. Add worker-side spans for provider calls and execution turns.
 3. Replace static token credentials with signed JWT validation.
 4. Port the remaining manual task/evidence mutation endpoints or intentionally deprecate them behind the Go workflow API.

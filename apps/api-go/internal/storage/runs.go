@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/domain"
+	"github.com/waqasraza123/agent-runway/apps/api-go/internal/requestmeta"
 )
 
 var ErrRunNotFound = errors.New("run not found")
@@ -253,6 +254,14 @@ func updateRunStateInTx(
 }
 
 func appendEventInTx(ctx context.Context, tx pgx.Tx, eventRecord domain.RunEventRecord) error {
+	if metadata, ok := requestmeta.FromContext(ctx); ok {
+		if eventRecord.RequestID == "" {
+			eventRecord.RequestID = metadata.RequestID
+		}
+		if eventRecord.Traceparent == "" {
+			eventRecord.Traceparent = metadata.Traceparent
+		}
+	}
 	payload, err := json.Marshal(eventRecord)
 	if err != nil {
 		return err
@@ -264,12 +273,16 @@ func appendEventInTx(ctx context.Context, tx pgx.Tx, eventRecord domain.RunEvent
 			run_id,
 			event_type,
 			occurred_at,
+			request_id,
+			traceparent,
 			payload
-		) values ($1, $2, $3, $4, $5)`,
+		) values ($1, $2, $3, $4, $5, $6, $7)`,
 		eventRecord.EventID,
 		eventRecord.RunID,
 		string(eventRecord.EventType),
 		eventRecord.OccurredAt,
+		eventRecord.RequestID,
+		eventRecord.Traceparent,
 		string(payload),
 	)
 	return err

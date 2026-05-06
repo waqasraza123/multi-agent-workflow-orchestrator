@@ -38,6 +38,8 @@ Agent Runway is a backend-first AI workflow automation system. It turns a busine
 - Go-owned durable user, tenant, membership, and run ownership records
 - Go-owned tenant-scoped run list, read, and mutation checks
 - Go-owned structured request logs and Python worker trace propagation
+- Go-owned durable request metadata on run events
+- Go-owned OTLP/HTTP server span export
 - private Python agent-worker scaffold
 - shared worker-boundary contracts
 - FastAPI endpoints for the current execution workflow
@@ -141,15 +143,15 @@ Fake LLM mode:
 ## Current limitations
 
 - no frontend operator console
-- no OpenTelemetry collector/exporter yet
 - no distributed worker layer
+- no worker-side provider/database spans yet
 - provider routing, budget controls, and tenant-specific model policy are not implemented yet
 - signed JWT validation for external identity providers is not implemented yet
 
 ## Recommended next roadmap
 
-- add OpenTelemetry span export
 - add provider routing, budgets, and tenant-specific model policy
+- add worker-side provider/database spans
 - add signed JWT validation for external identity providers
 - add frontend operator console
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/config"
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/httpapi"
+	"github.com/waqasraza123/agent-runway/apps/api-go/internal/observability"
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/pythonworker"
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/storage"
 )
@@ -33,12 +34,32 @@ func main() {
 		store = openedStore
 	}
 
+	traceExporter := observability.NewSpanExporter(observability.SpanExporterOptions{
+		Endpoint:           settings.OTLPTracesEndpoint,
+		Headers:            settings.OTLPHeaders,
+		Timeout:            time.Duration(settings.OTLPTimeoutSeconds * float64(time.Second)),
+		QueueSize:          settings.OTLPQueueSize,
+		ServiceName:        settings.ServiceName,
+		ServiceEnvironment: settings.ServiceEnvironment,
+		Logger:             logger,
+	})
+	if traceExporter != nil {
+		defer func() {
+			shutdownContext, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			if err := traceExporter.Close(shutdownContext); err != nil {
+				logger.Warn("trace exporter shutdown failed", "error", err)
+			}
+		}()
+	}
+
 	workerClient := pythonworker.NewClient(settings.AgentWorkerURL, settings.AgentWorkerToken)
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Logger:       logger,
-		Store:        store,
-		WorkerClient: workerClient,
-		Settings:     settings,
+		Logger:        logger,
+		Store:         store,
+		WorkerClient:  workerClient,
+		TraceExporter: traceExporter,
+		Settings:      settings,
 	})
 
 	server := &http.Server{
