@@ -16,7 +16,7 @@ The Go service in `apps/api-go` currently owns:
 - `GET /runs/{run_id}/state`
 - `POST /runs/{run_id}/plan`
 - `GET /runs/{run_id}/plans/latest`
-- `POST /runs/{run_id}/turns/advance`
+- `POST /runs/{run_id}/turns/advance` in deterministic and worker-backed LLM modes
 
 The Python FastAPI app remains the reference for endpoints that are not listed above.
 
@@ -28,7 +28,7 @@ Current Go state transitions:
 
 - Run creation starts a run in `planning`.
 - Plan generation registers deterministic template tasks and leaves the run in `planning`.
-- Turn advancement starts the next ready task, executes deterministic tool logic, records evidence, completes the task, and moves the run to `executing` or `verifying`.
+- Turn advancement starts the next ready task, executes deterministic logic or calls the Python worker for LLM execution, records tool calls and evidence, completes the task, and moves the run to `executing` or `verifying`.
 
 ## Persistence Model
 
@@ -39,6 +39,7 @@ Go writes to the existing Alembic-managed tables:
 - `run_plans`
 - `run_turns`
 - `run_tool_calls`
+- `run_llm_calls`
 
 The tables continue to store full JSON payloads in the same model shape used by Python. Go also maintains indexed columns such as `status`, `workflow_type`, `created_at`, `task_id`, and `turn_id`.
 
@@ -53,8 +54,9 @@ Turn advancement is persisted transactionally:
 
 1. update `run_states`
 2. insert `run_tool_calls`
-3. insert `run_turns`
-4. append `task_started`, `tool_executed`, `evidence_recorded`, `task_completed`, and `turn_executed`
+3. insert `run_llm_calls` when `EXECUTION_BACKEND=llm`
+4. insert `run_turns`
+5. append `task_started`, `tool_executed`, `evidence_recorded`, `task_completed`, and `turn_executed`
 
 ## Deterministic Execution
 
@@ -77,7 +79,9 @@ The private Python worker lives in `services/agent_worker` and exposes:
 
 The worker returns structured turn outcomes and does not write to the database.
 
-The next production step is to let Go choose between deterministic execution and worker-backed LLM execution. Go should still own the final run state update, event append, turn record, tool call records, and any fallback decision.
+Go selects worker-backed LLM execution when `EXECUTION_BACKEND=llm`. The Python worker returns a structured turn outcome. Go still owns the final run state update, event append, turn record, tool-call records, LLM-call record, and fallback persistence.
+
+If the Python worker is unreachable or returns a transport-level error, Go falls back to deterministic turn execution and still persists an LLM-call record with `fallback_used=true` and the error message. This keeps the run advancing while preserving the failed LLM execution attempt for audit.
 
 ## Operational Notes
 
@@ -89,8 +93,7 @@ No Go-native migration system is introduced yet. Alembic remains the migration a
 
 ## Next Implementation Order
 
-1. Wire Go turn advancement to the Python worker for LLM execution.
-2. Port Go read/list endpoints for events, turns, tool calls, and plans.
-3. Port verification and finalization.
-4. Add auth/RBAC at the Go API boundary.
-5. Add structured request logging, request IDs, and trace propagation between Go and Python.
+1. Port Go read/list endpoints for events, turns, tool calls, LLM calls, and plans.
+2. Port verification and finalization.
+3. Add auth/RBAC at the Go API boundary.
+4. Add structured request logging, request IDs, and trace propagation between Go and Python.

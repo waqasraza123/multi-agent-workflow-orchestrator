@@ -131,8 +131,18 @@ func (handler Handler) AdvanceTurn(response http.ResponseWriter, request *http.R
 		writeError(response, http.StatusInternalServerError, "Failed to build turn")
 		return
 	}
-	turnResult := domain.ExecuteDeterministicTurn(runState, *activeTask)
+	executionOutcome, err := handler.executeTurn(request.Context(), runState, *activeTask, turnID)
+	if err != nil {
+		handler.logError("execute turn failed", err)
+		writeError(response, http.StatusInternalServerError, "Failed to execute turn")
+		return
+	}
+	turnResult := executionOutcome.Result
 	toolCalls := make([]domain.RunToolCallRecord, 0, len(turnResult.PlannedToolCalls))
+	llmCalls := make([]domain.LLMCallRecord, 0, 1)
+	if executionOutcome.LLMCall != nil {
+		llmCalls = append(llmCalls, *executionOutcome.LLMCall)
+	}
 	toolCallIDs := make([]string, 0, len(turnResult.PlannedToolCalls))
 	evidenceIDs := make([]string, 0, len(turnResult.PlannedToolCalls))
 
@@ -233,6 +243,7 @@ func (handler Handler) AdvanceTurn(response http.ResponseWriter, request *http.R
 		runState,
 		turn,
 		toolCalls,
+		llmCalls,
 		events,
 	)
 	if err != nil {

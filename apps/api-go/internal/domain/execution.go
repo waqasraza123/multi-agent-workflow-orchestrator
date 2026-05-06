@@ -31,6 +31,40 @@ type RunToolCallRecord struct {
 	CreatedAt  time.Time         `json:"created_at"`
 }
 
+type LLMUsage struct {
+	InputTokens      int      `json:"input_tokens"`
+	OutputTokens     int      `json:"output_tokens"`
+	TotalTokens      int      `json:"total_tokens"`
+	EstimatedCostUSD *float64 `json:"estimated_cost_usd"`
+}
+
+type StructuredTurnOutput struct {
+	Summary          string            `json:"summary"`
+	PlannedToolCalls []PlannedToolCall `json:"planned_tool_calls"`
+}
+
+type LLMCallRecord struct {
+	LLMCallID         string               `json:"llm_call_id"`
+	RunID             string               `json:"run_id"`
+	TurnID            string               `json:"turn_id"`
+	TaskID            string               `json:"task_id"`
+	AgentName         string               `json:"agent_name"`
+	ProviderName      string               `json:"provider_name"`
+	ModelName         string               `json:"model_name"`
+	StructuredOutput  StructuredTurnOutput `json:"structured_output"`
+	Usage             LLMUsage             `json:"usage"`
+	AvailableToolNames []string            `json:"available_tool_names"`
+	RequestPayload     map[string]any      `json:"request_payload"`
+	ResponsePayload    map[string]any      `json:"response_payload"`
+	FinishReason      *string              `json:"finish_reason"`
+	LatencyMS         *int                 `json:"latency_ms"`
+	ErrorMessage      *string              `json:"error_message"`
+	RawResponseText   *string              `json:"raw_response_text"`
+	AttemptCount      int                  `json:"attempt_count"`
+	FallbackUsed      bool                 `json:"fallback_used"`
+	CreatedAt         time.Time            `json:"created_at"`
+}
+
 type PlannedToolCall struct {
 	ToolName  string            `json:"tool_name"`
 	ToolInput map[string]string `json:"tool_input"`
@@ -222,6 +256,51 @@ func NewTurnRecord(
 		CreatedAt:         time.Now().UTC(),
 		ResultingRunStatus: resultingRunStatus,
 	}
+}
+
+func NewLLMCallRecord(
+	runID string,
+	turnID string,
+	task TaskRecord,
+	providerName string,
+	modelName string,
+	output StructuredTurnOutput,
+	usage LLMUsage,
+	availableToolNames []string,
+	requestPayload map[string]any,
+	responsePayload map[string]any,
+	finishReason *string,
+	latencyMS *int,
+	errorMessage *string,
+	rawResponseText *string,
+	attemptCount int,
+	fallbackUsed bool,
+) (LLMCallRecord, error) {
+	llmCallID, err := NewID("llm_call")
+	if err != nil {
+		return LLMCallRecord{}, err
+	}
+	return LLMCallRecord{
+		LLMCallID:         llmCallID,
+		RunID:             runID,
+		TurnID:            turnID,
+		TaskID:            task.TaskID,
+		AgentName:         task.AssignedAgent,
+		ProviderName:      providerName,
+		ModelName:         modelName,
+		StructuredOutput:  output,
+		Usage:             usage,
+		AvailableToolNames: availableToolNames,
+		RequestPayload:     requestPayload,
+		ResponsePayload:    responsePayload,
+		FinishReason:      finishReason,
+		LatencyMS:         latencyMS,
+		ErrorMessage:      errorMessage,
+		RawResponseText:   rawResponseText,
+		AttemptCount:      attemptCount,
+		FallbackUsed:      fallbackUsed,
+		CreatedAt:         time.Now().UTC(),
+	}, nil
 }
 
 func buildTurnSummary(agentName string, taskTitle string) string {

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/waqasraza123/agent-runway/apps/api-go/internal/config"
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/pythonworker"
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/storage"
 )
@@ -13,6 +14,7 @@ type Dependencies struct {
 	Logger       *slog.Logger
 	Store        *storage.Store
 	WorkerClient *pythonworker.Client
+	Settings     config.Settings
 }
 
 func NewRouter(dependencies Dependencies) http.Handler {

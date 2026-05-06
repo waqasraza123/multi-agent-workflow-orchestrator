@@ -111,7 +111,7 @@ The Go control plane currently owns:
 - `GET /health`
 - `GET /ready`
 
-The remaining workflow endpoints continue to use the Python FastAPI app as the reference implementation until they are ported. LLM-backed turn advancement remains in the Python path until the Go control plane is wired to the private Python worker for execution.
+The remaining workflow endpoints continue to use the Python FastAPI app as the reference implementation until they are ported. In `EXECUTION_BACKEND=llm` mode, Go calls the private Python worker for turn execution and then persists the resulting state, turn, tool-call, evidence, event, and LLM-call records itself. If the worker is unavailable, Go falls back to deterministic execution and records the LLM failure for audit.
 
 Run the Python worker locally:
 
@@ -123,6 +123,21 @@ Run the Go control plane locally:
 
 ```bash
 make api-go-dev
+```
+
+Use deterministic turn execution by default:
+
+```bash
+EXECUTION_BACKEND=deterministic
+```
+
+Use worker-backed LLM execution:
+
+```bash
+EXECUTION_BACKEND=llm
+LLM_PROVIDER_NAME=fake
+LLM_MODEL_NAME=fake-model
+AGENT_WORKER_URL=http://127.0.0.1:8090
 ```
 
 Run both services with Postgres:

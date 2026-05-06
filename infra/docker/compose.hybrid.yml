@@ -57,6 +57,9 @@ services:
       DATABASE_URL: postgres://agent_runway:agent_runway@postgres:5432/agent_runway?sslmode=disable
       AGENT_WORKER_URL: http://agent-worker:8090
       AGENT_WORKER_TOKEN: local-agent-worker-token
+      EXECUTION_BACKEND: deterministic
+      LLM_PROVIDER_NAME: fake
+      LLM_MODEL_NAME: fake-model
     command: go run ./cmd/api
     depends_on:
       postgres:

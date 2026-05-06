@@ -88,6 +88,7 @@ func (store *Store) SaveTurnAdvance(
 	runState domain.RunStateSnapshot,
 	turn domain.RunTurnRecord,
 	toolCalls []domain.RunToolCallRecord,
+	llmCalls []domain.LLMCallRecord,
 	events []domain.RunEventRecord,
 ) (domain.RunTurnRecord, domain.RunStateSnapshot, error) {
 	tx, err := store.pool.Begin(ctx)
@@ -122,6 +123,35 @@ func (store *Store) SaveTurnAdvance(
 			toolCall.TurnID,
 			toolCall.TaskID,
 			toolCall.CreatedAt,
+			string(payload),
+		)
+		if err != nil {
+			return domain.RunTurnRecord{}, domain.RunStateSnapshot{}, err
+		}
+	}
+
+	for _, llmCall := range llmCalls {
+		payload, err := json.Marshal(llmCall)
+		if err != nil {
+			return domain.RunTurnRecord{}, domain.RunStateSnapshot{}, err
+		}
+		_, err = tx.Exec(
+			ctx,
+			`insert into run_llm_calls (
+				llm_call_id,
+				run_id,
+				turn_id,
+				task_id,
+				provider_name,
+				created_at,
+				payload
+			) values ($1, $2, $3, $4, $5, $6, $7)`,
+			llmCall.LLMCallID,
+			llmCall.RunID,
+			llmCall.TurnID,
+			llmCall.TaskID,
+			llmCall.ProviderName,
+			llmCall.CreatedAt,
 			string(payload),
 		)
 		if err != nil {

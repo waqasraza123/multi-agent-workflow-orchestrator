@@ -7,7 +7,8 @@ Current responsibilities:
 - expose Go service health/readiness endpoints
 - own initial run creation and run reads
 - own deterministic plan generation
-- own deterministic turn advancement with persisted turns, tool calls, evidence, and events
+- own deterministic and worker-backed LLM turn advancement
+- persist turns, tool calls, LLM calls, evidence, and events
 - connect to PostgreSQL through `pgx`
 - write run creation events
 - call the private Python agent worker over HTTP
@@ -29,7 +30,18 @@ PORT=8080
 DATABASE_URL=postgres://user:password@localhost:5432/agent_runway?sslmode=disable
 AGENT_WORKER_URL=http://127.0.0.1:8090
 AGENT_WORKER_TOKEN=
+EXECUTION_BACKEND=deterministic
+LLM_PROVIDER_NAME=fake
+LLM_MODEL_NAME=fake-model
+LLM_MAX_RETRIES=0
+LLM_TIMEOUT_SECONDS=
+LLM_TEMPERATURE=
+LLM_MAX_OUTPUT_TOKENS=
 ```
+
+Set `EXECUTION_BACKEND=llm` to call the private Python worker during `POST /runs/{run_id}/turns/advance`. Go still owns the final run state transition and database writes.
+
+If the Python worker is unavailable, the Go control plane falls back to deterministic execution and persists an LLM-call record with the failure details.
 
 The current endpoints are:
 
@@ -43,4 +55,4 @@ The current endpoints are:
 - `GET /runs/{run_id}/plans/latest`
 - `POST /runs/{run_id}/turns/advance`
 
-The next implementation step is to connect LLM turn advancement to the Python agent worker, then port event/turn/tool-call list endpoints.
+The next implementation step is to port event, turn, tool-call, and LLM-call list endpoints.

@@ -38,6 +38,7 @@ func main() {
 		Logger:       logger,
 		Store:        store,
 		WorkerClient: workerClient,
+		Settings:     settings,
 	})
 
 	server := &http.Server{
