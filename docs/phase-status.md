@@ -32,6 +32,7 @@ Completed areas:
 - Go-owned artifact list endpoints for events, turns, tool calls, and LLM calls
 - Go-owned verification and finalization endpoints
 - Go-owned finalization gate for passing verification and pending approvals
+- Go-owned approval request, listing, and decision endpoints
 - private Python agent-worker scaffold
 - shared worker-boundary contracts
 - unit and integration tests for the implemented platform spine
@@ -58,7 +59,6 @@ This repository is in a strong backend MVP state for:
 ## Next practical upgrades
 
 - auth and RBAC
-- port approvals into the Go control plane
 - observability and tracing
 - richer provider policies
 - LLM-backed planning

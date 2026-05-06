@@ -21,6 +21,9 @@ The Go service in `apps/api-go` currently owns:
 - `GET /runs/{run_id}/verifications/latest`
 - `POST /runs/{run_id}/finalize`
 - `GET /runs/{run_id}/outputs/latest`
+- `GET /runs/{run_id}/approvals`
+- `POST /runs/{run_id}/approvals`
+- `POST /runs/{run_id}/approvals/{approval_id}/decide`
 - `GET /runs/{run_id}/events`
 - `GET /runs/{run_id}/turns`
 - `GET /runs/{run_id}/tool-calls`
@@ -37,6 +40,7 @@ Current Go state transitions:
 - Run creation starts a run in `planning`.
 - Plan generation registers deterministic template tasks and leaves the run in `planning`.
 - Turn advancement starts the next ready task, executes deterministic logic or calls the Python worker for LLM execution, records tool calls and evidence, completes the task, and moves the run to `executing` or `verifying`.
+- Approval requests create pending review gates, approval decisions move pending records to approved, rejected, or revision requested, and both paths append lifecycle events.
 - Verification records a pass/fail report based on task completion, active-task state, and task presence.
 - Finalization requires `verifying` status, a passing latest verification, and zero pending approvals before writing the final output and moving the run to `completed`.
 
@@ -50,9 +54,9 @@ Go writes to the existing Alembic-managed tables:
 - `run_turns`
 - `run_tool_calls`
 - `run_llm_calls`
+- `run_approvals`
 - `run_verifications`
 - `run_outputs`
-- `run_approvals` for the pending-approval finalization gate
 
 The tables continue to store full JSON payloads in the same model shape used by Python. Go also maintains indexed columns such as `status`, `workflow_type`, `created_at`, `task_id`, and `turn_id`.
 
@@ -70,6 +74,16 @@ Turn advancement is persisted transactionally:
 3. insert `run_llm_calls` when `EXECUTION_BACKEND=llm`
 4. insert `run_turns`
 5. append `task_started`, `tool_executed`, `evidence_recorded`, `task_completed`, and `turn_executed`
+
+Approval requests are persisted transactionally:
+
+1. insert `run_approvals`
+2. append `approval_requested`
+
+Approval decisions are persisted transactionally:
+
+1. update `run_approvals`
+2. append `approval_decided`
 
 Verification is persisted transactionally:
 
@@ -117,7 +131,7 @@ No Go-native migration system is introduced yet. Alembic remains the migration a
 
 ## Next Implementation Order
 
-1. Port approvals.
-2. Add auth/RBAC at the Go API boundary.
-3. Add structured request logging, request IDs, and trace propagation between Go and Python.
-4. Add richer provider policies and LLM-backed planning.
+1. Add auth/RBAC at the Go API boundary.
+2. Add structured request logging, request IDs, and trace propagation between Go and Python.
+3. Add richer provider policies and LLM-backed planning.
+4. Port the remaining manual task/evidence mutation endpoints or intentionally deprecate them behind the Go workflow API.

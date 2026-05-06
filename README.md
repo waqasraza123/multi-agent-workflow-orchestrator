@@ -49,7 +49,9 @@ Key workflow endpoints:
 - `GET /runs/{run_id}/events`
 - `GET /runs/{run_id}/tool-calls`
 - `GET /runs/{run_id}/llm-calls`
+- `GET /runs/{run_id}/approvals`
 - `POST /runs/{run_id}/approvals`
+- `POST /runs/{run_id}/approvals/{approval_id}/decide`
 - `POST /runs/{run_id}/verify`
 - `POST /runs/{run_id}/finalize`
 - `GET /runs/{run_id}/outputs/latest`
@@ -112,6 +114,9 @@ The Go control plane currently owns:
 - `GET /runs/{run_id}/verifications/latest`
 - `POST /runs/{run_id}/finalize`
 - `GET /runs/{run_id}/outputs/latest`
+- `GET /runs/{run_id}/approvals`
+- `POST /runs/{run_id}/approvals`
+- `POST /runs/{run_id}/approvals/{approval_id}/decide`
 - `GET /runs/{run_id}/events`
 - `GET /runs/{run_id}/turns`
 - `GET /runs/{run_id}/tool-calls`
@@ -119,7 +124,7 @@ The Go control plane currently owns:
 - `GET /health`
 - `GET /ready`
 
-The remaining workflow endpoints continue to use the Python FastAPI app as the reference implementation until they are ported. In `EXECUTION_BACKEND=llm` mode, Go calls the private Python worker for turn execution and then persists the resulting state, turn, tool-call, evidence, event, and LLM-call records itself. Go also verifies completed runs, enforces the finalization gate, writes final outputs, and records lifecycle events. If the worker is unavailable, Go falls back to deterministic execution and records the LLM failure for audit.
+The remaining workflow endpoints continue to use the Python FastAPI app as the reference implementation until they are ported. In `EXECUTION_BACKEND=llm` mode, Go calls the private Python worker for turn execution and then persists the resulting state, turn, tool-call, evidence, event, and LLM-call records itself. Go also owns approval checkpoints, verifies completed runs, enforces the finalization gate, writes final outputs, and records lifecycle events. If the worker is unavailable, Go falls back to deterministic execution and records the LLM failure for audit.
 
 Run the Python worker locally:
 
