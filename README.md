@@ -105,10 +105,13 @@ The Go control plane currently owns:
 - `GET /runs`
 - `GET /runs/{run_id}`
 - `GET /runs/{run_id}/state`
+- `POST /runs/{run_id}/plan`
+- `GET /runs/{run_id}/plans/latest`
+- `POST /runs/{run_id}/turns/advance`
 - `GET /health`
 - `GET /ready`
 
-The remaining workflow endpoints continue to use the Python FastAPI app as the reference implementation until they are ported.
+The remaining workflow endpoints continue to use the Python FastAPI app as the reference implementation until they are ported. LLM-backed turn advancement remains in the Python path until the Go control plane is wired to the private Python worker for execution.
 
 Run the Python worker locally:
 

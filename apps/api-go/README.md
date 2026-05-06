@@ -6,6 +6,8 @@ Current responsibilities:
 
 - expose Go service health/readiness endpoints
 - own initial run creation and run reads
+- own deterministic plan generation
+- own deterministic turn advancement with persisted turns, tool calls, evidence, and events
 - connect to PostgreSQL through `pgx`
 - write run creation events
 - call the private Python agent worker over HTTP
@@ -37,5 +39,8 @@ The current endpoints are:
 - `GET /runs`
 - `GET /runs/{run_id}`
 - `GET /runs/{run_id}/state`
+- `POST /runs/{run_id}/plan`
+- `GET /runs/{run_id}/plans/latest`
+- `POST /runs/{run_id}/turns/advance`
 
-The next implementation step is to port planning and turn advancement into this service while keeping the Python app as the behavior reference.
+The next implementation step is to connect LLM turn advancement to the Python agent worker, then port event/turn/tool-call list endpoints.

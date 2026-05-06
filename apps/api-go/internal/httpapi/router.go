@@ -25,6 +25,9 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	router.Get("/runs", handler.ListRuns)
 	router.Get("/runs/{run_id}", handler.GetRun)
 	router.Get("/runs/{run_id}/state", handler.GetRunState)
+	router.Post("/runs/{run_id}/plan", handler.GeneratePlan)
+	router.Get("/runs/{run_id}/plans/latest", handler.GetLatestPlan)
+	router.Post("/runs/{run_id}/turns/advance", handler.AdvanceTurn)
 
 	return router
 }

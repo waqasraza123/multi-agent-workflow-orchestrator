@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/domain"
@@ -28,21 +27,14 @@ func (store *Store) CreateRunState(
 	if err != nil {
 		return domain.RunStateSnapshot{}, err
 	}
-	eventID, err := domain.NewID("event")
-	if err != nil {
-		return domain.RunStateSnapshot{}, err
-	}
-	occurredAt := time.Now().UTC()
-	eventPayload, err := json.Marshal(map[string]any{
-		"event_id":    eventID,
-		"run_id":      snapshot.RunID,
-		"event_type":  "run_created",
-		"occurred_at": occurredAt,
-		"payload": map[string]string{
+	eventRecord, err := domain.NewRunEvent(
+		snapshot.RunID,
+		domain.RunEventTypeRunCreated,
+		map[string]any{
 			"workflow_type": string(snapshot.WorkflowType),
 			"status":        string(snapshot.Status),
 		},
-	})
+	)
 	if err != nil {
 		return domain.RunStateSnapshot{}, err
 	}
@@ -76,22 +68,7 @@ func (store *Store) CreateRunState(
 		return domain.RunStateSnapshot{}, err
 	}
 
-	_, err = tx.Exec(
-		ctx,
-		`insert into run_events (
-			event_id,
-			run_id,
-			event_type,
-			occurred_at,
-			payload
-		) values ($1, $2, $3, $4, $5)`,
-		eventID,
-		snapshot.RunID,
-		"run_created",
-		occurredAt,
-		string(eventPayload),
-	)
-	if err != nil {
+	if err := appendEventInTx(ctx, tx, eventRecord); err != nil {
 		return domain.RunStateSnapshot{}, err
 	}
 
@@ -197,4 +174,55 @@ func decodeRunState(payload string) (domain.RunStateSnapshot, error) {
 		return domain.RunStateSnapshot{}, fmt.Errorf("decode run state payload: %w", err)
 	}
 	return snapshot, nil
+}
+
+func updateRunStateInTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	snapshot domain.RunStateSnapshot,
+) error {
+	payload, err := json.Marshal(snapshot)
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(
+		ctx,
+		`update run_states
+		set workflow_type = $2,
+			status = $3,
+			created_at = $4,
+			updated_at = $5,
+			payload = $6
+		where run_id = $1`,
+		snapshot.RunID,
+		string(snapshot.WorkflowType),
+		string(snapshot.Status),
+		snapshot.CreatedAt,
+		snapshot.UpdatedAt,
+		string(payload),
+	)
+	return err
+}
+
+func appendEventInTx(ctx context.Context, tx pgx.Tx, eventRecord domain.RunEventRecord) error {
+	payload, err := json.Marshal(eventRecord)
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(
+		ctx,
+		`insert into run_events (
+			event_id,
+			run_id,
+			event_type,
+			occurred_at,
+			payload
+		) values ($1, $2, $3, $4, $5)`,
+		eventRecord.EventID,
+		eventRecord.RunID,
+		string(eventRecord.EventType),
+		eventRecord.OccurredAt,
+		string(payload),
+	)
+	return err
 }

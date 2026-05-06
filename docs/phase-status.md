@@ -27,6 +27,7 @@ Completed areas:
 - OpenAI-compatible provider support
 - hybrid Go control-plane scaffold
 - Go-owned run create/list/read endpoints
+- Go-owned deterministic planning and turn advancement
 - private Python agent-worker scaffold
 - shared worker-boundary contracts
 - unit and integration tests for the implemented platform spine
@@ -53,7 +54,8 @@ This repository is in a strong backend MVP state for:
 ## Next practical upgrades
 
 - auth and RBAC
-- Go planning and turn-advancement parity with the Python reference API
+- wire Go turn advancement to the Python worker for LLM execution
+- port Go list endpoints for events, turns, tool calls, LLM calls, plans, and outputs
 - observability and tracing
 - richer provider policies
 - LLM-backed planning
