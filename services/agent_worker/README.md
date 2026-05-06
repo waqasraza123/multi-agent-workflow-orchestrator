@@ -29,3 +29,12 @@ Authorization: Bearer <token>
 ```
 
 This service returns structured turn execution outcomes. It does not mutate run state.
+
+The Go control plane forwards request correlation headers:
+
+```text
+X-Request-ID: <request-id>
+traceparent: <w3c-traceparent>
+```
+
+The worker echoes both headers and logs `agent_worker_request` with request ID, traceparent, method, path, status, and duration.

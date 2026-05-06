@@ -33,6 +33,8 @@ The Python FastAPI app remains the reference for endpoints that are not listed a
 
 The Go service also owns opt-in API-boundary RBAC for the workflow endpoints. See `docs/go-auth-rbac.md`.
 
+The Go service owns request correlation and structured HTTP logs for the workflow endpoints. See `docs/go-observability.md`.
+
 ## State Ownership
 
 Go owns run state mutation for the endpoints it serves. Python must not mutate run state when called as a worker. This keeps state transitions auditable and prevents split-brain behavior between services.
@@ -123,6 +125,8 @@ Go selects worker-backed LLM execution when `EXECUTION_BACKEND=llm`. The Python 
 
 If the Python worker is unreachable or returns a transport-level error, Go falls back to deterministic turn execution and still persists an LLM-call record with `fallback_used=true` and the error message. This keeps the run advancing while preserving the failed LLM execution attempt for audit.
 
+Go forwards `X-Request-ID` and `traceparent` to the worker. The worker echoes both headers and logs them with its request record.
+
 ## Operational Notes
 
 Use `make hybrid-up` for local multi-service wiring with Postgres, Alembic migrations, Python worker, and Go API.
@@ -133,7 +137,7 @@ No Go-native migration system is introduced yet. Alembic remains the migration a
 
 ## Next Implementation Order
 
-1. Add structured request logging, request IDs, and trace propagation between Go and Python.
-2. Add richer provider policies and LLM-backed planning.
-3. Replace static auth tokens with durable user, tenant, and ownership records.
+1. Add richer provider policies and LLM-backed planning.
+2. Replace static auth tokens with durable user, tenant, and ownership records.
+3. Add OpenTelemetry span export and persist request IDs on durable run events.
 4. Port the remaining manual task/evidence mutation endpoints or intentionally deprecate them behind the Go workflow API.

@@ -1,7 +1,9 @@
 import os
-from collections.abc import Mapping
+import logging
+import time
+from collections.abc import Awaitable, Callable, Mapping
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi import status as http_status
 
 from multi_agent_platform.agents.fake_provider import FakeLlmProvider
@@ -15,9 +17,40 @@ from multi_agent_platform.contracts.turn_execution import (
 )
 
 
+LOGGER = logging.getLogger("agent_worker")
+REQUEST_ID_HEADER = "x-request-id"
+TRACEPARENT_HEADER = "traceparent"
+
+
 def create_app() -> FastAPI:
     application = FastAPI(title="Agent Runway Agent Worker", version="0.1.0")
     executor = AgentWorkerExecutor()
+
+    @application.middleware("http")
+    async def request_observability_middleware(
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
+        started_at = time.perf_counter()
+        request_id = request.headers.get(REQUEST_ID_HEADER, "")
+        traceparent = request.headers.get(TRACEPARENT_HEADER, "")
+        response = await call_next(request)
+        if request_id:
+            response.headers[REQUEST_ID_HEADER] = request_id
+        if traceparent:
+            response.headers[TRACEPARENT_HEADER] = traceparent
+        LOGGER.info(
+            "agent_worker_request",
+            extra={
+                "request_id": request_id,
+                "traceparent": traceparent,
+                "method": request.method,
+                "path": request.url.path,
+                "status": response.status_code,
+                "duration_ms": round((time.perf_counter() - started_at) * 1000),
+            },
+        )
+        return response
 
     @application.get("/health")
     def get_health() -> dict[str, str]:

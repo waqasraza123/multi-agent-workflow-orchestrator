@@ -6,6 +6,7 @@ Current responsibilities:
 
 - expose Go service health/readiness endpoints
 - enforce opt-in bearer-token RBAC for workflow endpoints
+- emit structured request logs with request IDs and trace context
 - own initial run creation and run reads
 - own deterministic plan generation
 - own deterministic and worker-backed LLM turn advancement
@@ -70,6 +71,15 @@ X-API-Key: <token>
 
 Role inheritance is `admin > operator > viewer`. Viewers can read runs and artifacts. Operators can mutate workflow state. Admins currently inherit every operator and viewer permission.
 
+The API accepts or generates request correlation headers and echoes them on every response:
+
+```text
+X-Request-ID: req_<32-hex-chars>
+traceparent: 00-<32-hex-trace-id>-<16-hex-span-id>-01
+```
+
+Every request emits a structured `http_request` log with request ID, traceparent, method, path, status, bytes, duration, remote address, and user agent. Calls to the Python worker forward the same headers.
+
 The current endpoints are:
 
 - `GET /health`
@@ -93,4 +103,4 @@ The current endpoints are:
 - `GET /runs/{run_id}/tool-calls`
 - `GET /runs/{run_id}/llm-calls`
 
-Finalization requires a run in `verifying`, a latest verification verdict of `pass`, and zero pending approvals. The next implementation step is structured request logging, request IDs, and trace propagation between Go and Python.
+Finalization requires a run in `verifying`, a latest verification verdict of `pass`, and zero pending approvals. The next implementation step is richer provider policies and LLM-backed planning.

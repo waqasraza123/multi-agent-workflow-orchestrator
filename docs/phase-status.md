@@ -34,6 +34,7 @@ Completed areas:
 - Go-owned finalization gate for passing verification and pending approvals
 - Go-owned approval request, listing, and decision endpoints
 - Go-owned opt-in auth/RBAC for workflow endpoints
+- Go-owned structured request logs and Python worker trace propagation
 - private Python agent-worker scaffold
 - shared worker-boundary contracts
 - unit and integration tests for the implemented platform spine
@@ -59,8 +60,8 @@ This repository is in a strong backend MVP state for:
 
 ## Next practical upgrades
 
-- observability and tracing
 - richer provider policies
 - LLM-backed planning
 - durable user, tenant, and ownership records
+- OpenTelemetry span export
 - frontend operator console

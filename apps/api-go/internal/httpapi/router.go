@@ -20,6 +20,7 @@ type Dependencies struct {
 func NewRouter(dependencies Dependencies) http.Handler {
 	router := chi.NewRouter()
 	handler := Handler{dependencies: dependencies}
+	router.Use(handler.requestMiddleware)
 
 	router.Get("/health", handler.Health)
 	router.Get("/ready", handler.Ready)

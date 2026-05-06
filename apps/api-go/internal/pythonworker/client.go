@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/contracts"
+	"github.com/waqasraza123/agent-runway/apps/api-go/internal/requestmeta"
 )
 
 type Client struct {
@@ -33,6 +34,7 @@ func (client *Client) Health(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	attachRequestMetadata(ctx, request)
 	response, err := client.httpClient.Do(request)
 	if err != nil {
 		return err
@@ -67,6 +69,7 @@ func (client *Client) ExecuteTurn(
 	if client.token != "" {
 		request.Header.Set("Authorization", "Bearer "+client.token)
 	}
+	attachRequestMetadata(ctx, request)
 
 	response, err := client.httpClient.Do(request)
 	if err != nil {
@@ -81,4 +84,17 @@ func (client *Client) ExecuteTurn(
 		return outcome, err
 	}
 	return outcome, nil
+}
+
+func attachRequestMetadata(ctx context.Context, request *http.Request) {
+	metadata, ok := requestmeta.FromContext(ctx)
+	if !ok {
+		return
+	}
+	if metadata.RequestID != "" {
+		request.Header.Set("X-Request-ID", metadata.RequestID)
+	}
+	if metadata.Traceparent != "" {
+		request.Header.Set("traceparent", metadata.Traceparent)
+	}
 }

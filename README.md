@@ -128,6 +128,8 @@ The remaining workflow endpoints continue to use the Python FastAPI app as the r
 
 The Go control plane supports opt-in RBAC with bearer or `X-API-Key` tokens. `GET /health` and `GET /ready` remain public for platform probes; workflow endpoints require viewer, operator, or admin access when `AUTH_MODE` is enabled.
 
+The Go control plane also emits structured request logs and propagates `X-Request-ID` plus `traceparent` to the Python worker so API and worker logs can be correlated for a single execution turn.
+
 Run the Python worker locally:
 
 ```bash
@@ -324,7 +326,7 @@ make smoke-llm-fake
 
 Agent Runway is backend-MVP ready for demos, architecture walkthroughs, portfolio presentation, and further hardening.
 
-The next production upgrades are observability, richer provider policies, and a fuller operator console.
+The next production upgrades are richer provider policies, LLM-backed planning, durable user/tenant ownership, and a fuller operator console.
 
 ## License
 
