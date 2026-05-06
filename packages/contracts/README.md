@@ -25,6 +25,10 @@ The Go control plane currently implements the initial run surface:
 - `POST /runs/{run_id}/plan`
 - `GET /runs/{run_id}/plans/latest`
 - `POST /runs/{run_id}/turns/advance`
+- `POST /runs/{run_id}/verify`
+- `GET /runs/{run_id}/verifications/latest`
+- `POST /runs/{run_id}/finalize`
+- `GET /runs/{run_id}/outputs/latest`
 - `GET /runs/{run_id}/events`
 - `GET /runs/{run_id}/turns`
 - `GET /runs/{run_id}/tool-calls`

@@ -8,8 +8,10 @@ Current responsibilities:
 - own initial run creation and run reads
 - own deterministic plan generation
 - own deterministic and worker-backed LLM turn advancement
+- own verification and finalization
 - persist turns, tool calls, LLM calls, evidence, and events
-- expose persisted events, turns, tool calls, and LLM calls
+- persist verification reports and final outputs
+- expose persisted events, turns, tool calls, LLM calls, verifications, and outputs
 - connect to PostgreSQL through `pgx`
 - write run creation events
 - call the private Python agent worker over HTTP
@@ -55,9 +57,13 @@ The current endpoints are:
 - `POST /runs/{run_id}/plan`
 - `GET /runs/{run_id}/plans/latest`
 - `POST /runs/{run_id}/turns/advance`
+- `POST /runs/{run_id}/verify`
+- `GET /runs/{run_id}/verifications/latest`
+- `POST /runs/{run_id}/finalize`
+- `GET /runs/{run_id}/outputs/latest`
 - `GET /runs/{run_id}/events`
 - `GET /runs/{run_id}/turns`
 - `GET /runs/{run_id}/tool-calls`
 - `GET /runs/{run_id}/llm-calls`
 
-The next implementation step is to port verification and finalization.
+Finalization requires a run in `verifying`, a latest verification verdict of `pass`, and zero pending approvals. The next implementation step is to port approval request and decision endpoints into Go, then add auth/RBAC at the API boundary.

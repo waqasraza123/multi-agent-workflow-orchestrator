@@ -30,6 +30,8 @@ Agent Runway is a backend-first AI workflow automation system. It turns a busine
 - Go-owned deterministic planning and turn advancement
 - Go-owned worker-backed LLM turn advancement
 - Go-owned artifact list endpoints for events, turns, tool calls, and LLM calls
+- Go-owned verification and finalization endpoints
+- Go-owned final output persistence
 - private Python agent-worker scaffold
 - shared worker-boundary contracts
 - FastAPI endpoints for the current execution workflow
@@ -141,7 +143,6 @@ Fake LLM mode:
 ## Recommended next roadmap
 
 - add richer provider policies
-- port verification and finalization into the Go control plane
 - port approvals into the Go control plane
 - add LLM-backed planning
 - add authentication and authorization
