@@ -26,6 +26,12 @@ or:
 AUTH_MODE=api_key
 ```
 
+or use externally signed JWTs:
+
+```bash
+AUTH_MODE=jwt
+```
+
 Token lists are comma-separated:
 
 ```bash
@@ -52,6 +58,59 @@ AUTH_TOKEN_PRINCIPALS_JSON='[
 ```
 
 The token must still be present in one of the role token lists. The JSON mapping supplies durable tenant/user identity only.
+
+## JWT Configuration
+
+JWT mode validates `Authorization: Bearer <jwt>` at the API boundary and maps claims to the same durable identity and RBAC model as static tokens.
+
+Shared-secret deployments can use HS256:
+
+```bash
+AUTH_MODE=jwt
+AUTH_JWT_ALGORITHMS=HS256
+AUTH_JWT_SIGNING_SECRET=<shared-secret>
+AUTH_JWT_ISSUER=https://issuer.example.com
+AUTH_JWT_AUDIENCE=agent-runway-api
+```
+
+Identity-provider deployments should use RS256 with either a PEM public key:
+
+```bash
+AUTH_MODE=jwt
+AUTH_JWT_ALGORITHMS=RS256
+AUTH_JWT_PUBLIC_KEY_PEM='-----BEGIN PUBLIC KEY-----...'
+AUTH_JWT_ISSUER=https://issuer.example.com
+AUTH_JWT_AUDIENCE=agent-runway-api
+```
+
+or a JWKS endpoint:
+
+```bash
+AUTH_MODE=jwt
+AUTH_JWT_ALGORITHMS=RS256
+AUTH_JWKS_URL=https://issuer.example.com/.well-known/jwks.json
+AUTH_JWKS_CACHE_SECONDS=300
+AUTH_JWT_ISSUER=https://issuer.example.com
+AUTH_JWT_AUDIENCE=agent-runway-api
+```
+
+Claim mapping:
+
+```bash
+AUTH_JWT_SUBJECT_CLAIM=sub
+AUTH_JWT_TENANT_CLAIM=tenant_id
+AUTH_JWT_ROLE_CLAIM=role
+AUTH_JWT_DISPLAY_NAME_CLAIM=name
+AUTH_JWT_EMAIL_CLAIM=email
+```
+
+The role claim may be a string or an array. Supported role values are:
+
+- `admin`
+- `operator`
+- `viewer`
+
+The validator rejects unsigned tokens, algorithms outside `AUTH_JWT_ALGORITHMS`, expired tokens, future `nbf`, future `iat`, issuer mismatches, and audience mismatches.
 
 ## Client Headers
 
@@ -131,7 +190,7 @@ When auth is disabled, local requests use `tenant_default` and `user_local`.
 - Missing token: `401`
 - Unknown token: `401`
 - Known token without enough role access: `403`
-- Auth enabled with no configured tokens: `503`
+- Auth enabled with no configured verifier: `503`
 
 ## Rotation Guidance
 
@@ -144,8 +203,7 @@ Use comma-separated token lists for zero-downtime rotation:
 
 ## Next Auth Hardening
 
-The next auth upgrade is replacing static token credentials with external identity verification:
+The next auth upgrade is expanding identity operations around the JWT boundary:
 
-- signed JWT validation
 - token revocation metadata
 - audit actor IDs on approvals, finalization, and future manual actions

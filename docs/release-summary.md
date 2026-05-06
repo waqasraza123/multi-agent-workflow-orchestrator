@@ -37,6 +37,7 @@ Agent Runway is a backend-first AI workflow automation system. It turns a busine
 - Go-owned opt-in auth/RBAC for workflow endpoints
 - Go-owned durable user, tenant, membership, and run ownership records
 - Go-owned tenant-scoped run list, read, and mutation checks
+- Go-owned signed JWT validation with HS256, RS256 PEM, and RS256 JWKS support
 - Go-owned structured request logs and Python worker trace propagation
 - Go-owned durable request metadata on run events
 - Go-owned OTLP/HTTP server span export
@@ -147,12 +148,14 @@ Fake LLM mode:
 - no frontend operator console
 - no distributed worker layer
 - no worker-side provider/database spans yet
-- signed JWT validation for external identity providers is not implemented yet
+- token revocation metadata is not implemented yet
+- audit actor IDs on manual decisions are not implemented yet
 
 ## Recommended next roadmap
 
 - add worker-side provider/database spans
-- add signed JWT validation for external identity providers
+- add token revocation metadata
+- add audit actor IDs on manual decisions
 - add frontend operator console
 
 ## Release note

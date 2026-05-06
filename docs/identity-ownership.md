@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Agent Runway now has a durable identity boundary for the Go control plane. Static bearer/API-key tokens still authenticate requests, but each accepted token resolves to a user, tenant, and role before workflow handlers run.
+Agent Runway now has a durable identity boundary for the Go control plane. Static bearer/API-key tokens and signed JWTs both resolve to a user, tenant, and role before workflow handlers run.
 
 The goal is tenant isolation for runs without introducing a full external identity provider yet.
 
@@ -27,7 +27,7 @@ Run ownership columns on `run_states`:
 
 The full run JSON payload also includes the same ownership fields so API responses and archived payloads remain self-describing. The indexed `run_states` columns are the source of truth; repository reads overlay those column values onto the JSON payload before returning a run.
 
-## Token Principal Resolution
+## Static Token Principal Resolution
 
 Existing token lists remain the role authority:
 
@@ -59,12 +59,26 @@ AUTH_TOKEN_PRINCIPALS_JSON='[
 
 The token must still appear in one of the role token lists. `AUTH_TOKEN_PRINCIPALS_JSON` only supplies the durable tenant/user identity.
 
+## JWT Principal Resolution
+
+In `AUTH_MODE=jwt`, the JWT subject claim becomes the durable user subject. The durable `user_id` is a stable hash of that subject. The tenant and role are read from configurable claims:
+
+```bash
+AUTH_JWT_SUBJECT_CLAIM=sub
+AUTH_JWT_TENANT_CLAIM=tenant_id
+AUTH_JWT_ROLE_CLAIM=role
+AUTH_JWT_DISPLAY_NAME_CLAIM=name
+AUTH_JWT_EMAIL_CLAIM=email
+```
+
+The Go API stores a SHA-256 fingerprint of the accepted JWT, not the raw token.
+
 ## Request Behavior
 
 When `AUTH_MODE` is enabled:
 
 1. The token is authenticated and mapped to a role.
-2. The token is resolved to a durable tenant/user principal.
+2. The token or JWT is resolved to a durable tenant/user principal.
 3. The Go API upserts `tenants`, `users`, and `tenant_memberships`.
 4. `POST /runs` stamps new runs with `tenant_id`, `owner_user_id`, and `created_by_user_id`.
 5. `GET /runs` filters by the caller's tenant.

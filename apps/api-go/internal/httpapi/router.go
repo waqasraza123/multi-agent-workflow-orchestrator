@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/waqasraza123/agent-runway/apps/api-go/internal/authjwt"
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/config"
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/observability"
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/pythonworker"
@@ -16,6 +17,7 @@ type Dependencies struct {
 	Store        *storage.Store
 	WorkerClient *pythonworker.Client
 	TraceExporter *observability.SpanExporter
+	JWTValidator *authjwt.Validator
 	Settings     config.Settings
 }
 

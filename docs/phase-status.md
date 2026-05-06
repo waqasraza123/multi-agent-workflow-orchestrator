@@ -37,6 +37,7 @@ Completed areas:
 - Go-owned opt-in auth/RBAC for workflow endpoints
 - Go-owned durable user, tenant, membership, and run ownership records
 - Go-owned tenant-scoped run list, read, and mutation checks
+- Go-owned signed JWT validation with HS256, RS256 PEM, and RS256 JWKS support
 - Go-owned structured request logs and Python worker trace propagation
 - Go-owned durable request metadata on run events
 - Go-owned OTLP/HTTP server span export
@@ -68,5 +69,6 @@ This repository is in a strong backend MVP state for:
 ## Next practical upgrades
 
 - worker-side spans for provider calls and execution turns
-- signed JWT validation for external identity providers
+- token revocation metadata
+- audit actor IDs on approvals, finalization, and future manual actions
 - frontend operator console

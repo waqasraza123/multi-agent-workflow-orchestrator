@@ -62,6 +62,18 @@ type Settings struct {
 	AuthAdminTokens          []string
 	AuthDefaultTenantID      string
 	AuthTokenPrincipals      []AuthTokenPrincipal
+	AuthJWTIssuer            string
+	AuthJWTAudience          string
+	AuthJWTTenantClaim       string
+	AuthJWTRoleClaim         string
+	AuthJWTSubjectClaim      string
+	AuthJWTDisplayNameClaim  string
+	AuthJWTEmailClaim        string
+	AuthJWTAlgorithms        []string
+	AuthJWTSigningSecret     string
+	AuthJWTPublicKeyPEM      string
+	AuthJWKSURL              string
+	AuthJWKSCacheSeconds     int
 	OTLPTracesEndpoint       string
 	OTLPHeaders              map[string]string
 	OTLPTimeoutSeconds       float64
@@ -100,6 +112,18 @@ func Load() Settings {
 		AuthAdminTokens:          readCSV("AUTH_ADMIN_TOKENS"),
 		AuthDefaultTenantID:      readEnv("AUTH_DEFAULT_TENANT_ID", "tenant_default"),
 		AuthTokenPrincipals:      readAuthTokenPrincipals("AUTH_TOKEN_PRINCIPALS_JSON"),
+		AuthJWTIssuer:            os.Getenv("AUTH_JWT_ISSUER"),
+		AuthJWTAudience:          os.Getenv("AUTH_JWT_AUDIENCE"),
+		AuthJWTTenantClaim:       readEnv("AUTH_JWT_TENANT_CLAIM", "tenant_id"),
+		AuthJWTRoleClaim:         readEnv("AUTH_JWT_ROLE_CLAIM", "role"),
+		AuthJWTSubjectClaim:      readEnv("AUTH_JWT_SUBJECT_CLAIM", "sub"),
+		AuthJWTDisplayNameClaim:  readEnv("AUTH_JWT_DISPLAY_NAME_CLAIM", "name"),
+		AuthJWTEmailClaim:        readEnv("AUTH_JWT_EMAIL_CLAIM", "email"),
+		AuthJWTAlgorithms:        readCSVWithFallback("AUTH_JWT_ALGORITHMS", "RS256,HS256"),
+		AuthJWTSigningSecret:     os.Getenv("AUTH_JWT_SIGNING_SECRET"),
+		AuthJWTPublicKeyPEM:      os.Getenv("AUTH_JWT_PUBLIC_KEY_PEM"),
+		AuthJWKSURL:              os.Getenv("AUTH_JWKS_URL"),
+		AuthJWKSCacheSeconds:     readInt("AUTH_JWKS_CACHE_SECONDS", 300),
 		OTLPTracesEndpoint:       readOTLPTracesEndpoint(),
 		OTLPHeaders:              readKeyValueCSV("OTEL_EXPORTER_OTLP_HEADERS"),
 		OTLPTimeoutSeconds:       readFloat("OTEL_EXPORTER_OTLP_TIMEOUT_SECONDS", 2),
@@ -119,6 +143,11 @@ func (settings Settings) AuthEnabled() bool {
 }
 
 func (settings Settings) HasAuthTokens() bool {
+	if settings.AuthMode == "jwt" {
+		return settings.AuthJWTSigningSecret != "" ||
+			settings.AuthJWTPublicKeyPEM != "" ||
+			settings.AuthJWKSURL != ""
+	}
 	return len(settings.AuthViewerTokens) > 0 ||
 		len(settings.AuthOperatorTokens) > 0 ||
 		len(settings.AuthAdminTokens) > 0
@@ -175,6 +204,22 @@ func readCSV(name string) []string {
 	value := os.Getenv(name)
 	if value == "" {
 		return []string{}
+	}
+	parts := strings.Split(value, ",")
+	items := make([]string, 0, len(parts))
+	for _, part := range parts {
+		item := strings.TrimSpace(part)
+		if item != "" {
+			items = append(items, item)
+		}
+	}
+	return items
+}
+
+func readCSVWithFallback(name string, fallback string) []string {
+	value := os.Getenv(name)
+	if value == "" {
+		value = fallback
 	}
 	parts := strings.Split(value, ",")
 	items := make([]string, 0, len(parts))

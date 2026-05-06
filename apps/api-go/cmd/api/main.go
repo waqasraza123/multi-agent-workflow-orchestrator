@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/waqasraza123/agent-runway/apps/api-go/internal/authjwt"
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/config"
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/httpapi"
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/observability"
@@ -54,11 +55,16 @@ func main() {
 	}
 
 	workerClient := pythonworker.NewClient(settings.AgentWorkerURL, settings.AgentWorkerToken)
+	var jwtValidator *authjwt.Validator
+	if settings.AuthMode == "jwt" {
+		jwtValidator = authjwt.NewValidator(settings)
+	}
 	router := httpapi.NewRouter(httpapi.Dependencies{
 		Logger:        logger,
 		Store:         store,
 		WorkerClient:  workerClient,
 		TraceExporter: traceExporter,
+		JWTValidator:  jwtValidator,
 		Settings:      settings,
 	})
 

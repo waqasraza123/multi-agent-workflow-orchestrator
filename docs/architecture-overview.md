@@ -16,7 +16,7 @@ The next backend architecture is a hybrid Go and Python deployment.
 - Python returns structured execution outcomes and does not mutate run state directly.
 - The Go control plane owns initial run creation, run reads, deterministic planning, worker-backed LLM planning, deterministic turn advancement, worker-backed LLM turn advancement, approvals, verification, and finalization.
 - The Go control plane exposes persisted workflow artifact reads for events, turns, tool calls, LLM calls, approvals, verifications, and final outputs.
-- The Go control plane enforces opt-in bearer-token RBAC, durable user/tenant identity, and tenant-scoped run ownership for workflow endpoints.
+- The Go control plane enforces opt-in static-token or signed-JWT RBAC, durable user/tenant identity, and tenant-scoped run ownership for workflow endpoints.
 - The Go control plane resolves tenant-specific provider routes and checks provider budgets before worker-backed LLM calls.
 - The Go control plane emits structured request logs, persists request IDs plus W3C trace context on run events, propagates both values to the Python worker, and exports OTLP/HTTP spans when configured.
 - The current Python FastAPI app remains the reference implementation for endpoints that have not yet been ported.

@@ -31,7 +31,7 @@ The Go service in `apps/api-go` currently owns:
 
 The Python FastAPI app remains the reference for endpoints that are not listed above.
 
-The Go service also owns opt-in API-boundary RBAC, durable token-to-principal identity, and tenant-scoped run ownership for the workflow endpoints. See `docs/go-auth-rbac.md` and `docs/identity-ownership.md`.
+The Go service also owns opt-in API-boundary RBAC, static token or signed JWT principal resolution, durable identity, and tenant-scoped run ownership for the workflow endpoints. See `docs/go-auth-rbac.md` and `docs/identity-ownership.md`.
 
 The Go service owns request correlation, structured HTTP logs, durable event correlation metadata, and optional OTLP/HTTP server span export for the workflow endpoints. See `docs/go-observability.md`.
 
@@ -160,6 +160,6 @@ No Go-native migration runner is introduced yet. Alembic remains the migration a
 ## Next Implementation Order
 
 1. Add worker-side spans for provider calls and execution turns.
-2. Replace static token credentials with signed JWT validation.
+2. Add token revocation metadata and audit actor IDs on manual decisions.
 3. Add operator-facing provider usage and budget reporting.
 4. Port the remaining manual task/evidence mutation endpoints or intentionally deprecate them behind the Go workflow API.

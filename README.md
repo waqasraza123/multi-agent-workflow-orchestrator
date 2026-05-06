@@ -245,16 +245,22 @@ Go API auth:
 AUTH_MODE=disabled
 AUTH_MODE=bearer
 AUTH_MODE=api_key
+AUTH_MODE=jwt
 AUTH_VIEWER_TOKENS=<comma-separated-read-tokens>
 AUTH_OPERATOR_TOKENS=<comma-separated-write-tokens>
 AUTH_ADMIN_TOKENS=<comma-separated-admin-tokens>
 AUTH_DEFAULT_TENANT_ID=tenant_default
 AUTH_TOKEN_PRINCIPALS_JSON='[{"token":"operator-token","tenant_id":"tenant_acme","user_id":"user_alice","subject":"user:alice@example.com"}]'
+AUTH_JWT_ISSUER=https://issuer.example.com
+AUTH_JWT_AUDIENCE=agent-runway-api
+AUTH_JWKS_URL=https://issuer.example.com/.well-known/jwks.json
 ```
 
-Use `AUTH_MODE=bearer` or `AUTH_MODE=api_key` outside local development. Clients can authenticate with `Authorization: Bearer <token>` or `X-API-Key: <token>`.
+Use `AUTH_MODE=bearer`, `AUTH_MODE=api_key`, or `AUTH_MODE=jwt` outside local development. Clients can authenticate with `Authorization: Bearer <token>` or `X-API-Key: <token>` for static modes, and `Authorization: Bearer <jwt>` for JWT mode.
 
 `AUTH_TOKEN_PRINCIPALS_JSON` is optional but recommended in deployed environments so each token maps to a stable tenant/user identity. The token must still be present in one of the role token lists.
+
+JWT mode supports HS256 shared secrets and RS256 validation from either a PEM public key or a JWKS URL. JWT claims map to durable user, tenant, and role records before workflow handlers run.
 
 Go API observability:
 
@@ -359,7 +365,7 @@ make smoke-llm-fake
 
 Agent Runway is backend-MVP ready for demos, architecture walkthroughs, portfolio presentation, and further hardening.
 
-The next production upgrades are signed JWT validation, worker-side spans, and a fuller operator console.
+The next production upgrades are worker-side spans, token revocation metadata, audit actor IDs, and a fuller operator console.
 
 ## License
 

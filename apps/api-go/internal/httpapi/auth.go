@@ -32,7 +32,7 @@ func (handler Handler) requireRole(
 			return
 		}
 		if !handler.dependencies.Settings.HasAuthTokens() {
-			writeError(response, http.StatusServiceUnavailable, "authentication is enabled but no tokens are configured")
+			writeError(response, http.StatusServiceUnavailable, "authentication is enabled but no verifier is configured")
 			return
 		}
 
@@ -40,6 +40,11 @@ func (handler Handler) requireRole(
 		if !ok {
 			response.Header().Set("WWW-Authenticate", `Bearer realm="agent-runway"`)
 			writeError(response, http.StatusUnauthorized, "authentication token is required")
+			return
+		}
+
+		if handler.dependencies.Settings.AuthMode == "jwt" {
+			handler.requireJWTRole(requiredRole, token, response, request, next)
 			return
 		}
 
@@ -69,6 +74,38 @@ func (handler Handler) requireRole(
 
 		next(response, request.WithContext(withAuthIdentity(request.Context(), identity)))
 	}
+}
+
+func (handler Handler) requireJWTRole(
+	requiredRole accessRole,
+	token string,
+	response http.ResponseWriter,
+	request *http.Request,
+	next http.HandlerFunc,
+) {
+	if handler.dependencies.JWTValidator == nil {
+		writeError(response, http.StatusServiceUnavailable, "jwt authentication is enabled but validator is not configured")
+		return
+	}
+	identity, err := handler.dependencies.JWTValidator.Validate(request.Context(), token)
+	if err != nil {
+		response.Header().Set("WWW-Authenticate", `Bearer realm="agent-runway"`)
+		writeError(response, http.StatusUnauthorized, "authentication token is invalid")
+		return
+	}
+	role := roleFromString(identity.Role)
+	if role < requiredRole {
+		writeError(response, http.StatusForbidden, "authentication token does not have access to this endpoint")
+		return
+	}
+	if handler.dependencies.Store != nil {
+		if err := handler.dependencies.Store.EnsureAuthIdentity(request.Context(), identity); err != nil {
+			handler.logError("persist jwt auth identity failed", err)
+			writeError(response, http.StatusInternalServerError, "Failed to persist authentication identity")
+			return
+		}
+	}
+	next(response, request.WithContext(withAuthIdentity(request.Context(), identity)))
 }
 
 func extractAccessToken(request *http.Request) (string, bool) {
@@ -152,6 +189,19 @@ func (role accessRole) String() string {
 		return "viewer"
 	default:
 		return "unknown"
+	}
+}
+
+func roleFromString(value string) accessRole {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "admin":
+		return roleAdmin
+	case "operator":
+		return roleOperator
+	case "viewer":
+		return roleViewer
+	default:
+		return 0
 	}
 }
 

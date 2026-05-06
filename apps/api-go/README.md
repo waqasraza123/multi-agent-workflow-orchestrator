@@ -56,11 +56,24 @@ PLANNING_MAX_OUTPUT_TOKENS=
 PLANNING_FALLBACK_ENABLED=true
 TENANT_PROVIDER_POLICIES_JSON=
 AUTH_MODE=disabled
+AUTH_MODE=jwt
 AUTH_VIEWER_TOKENS=
 AUTH_OPERATOR_TOKENS=
 AUTH_ADMIN_TOKENS=
 AUTH_DEFAULT_TENANT_ID=tenant_default
 AUTH_TOKEN_PRINCIPALS_JSON=
+AUTH_JWT_ALGORITHMS=RS256,HS256
+AUTH_JWT_ISSUER=
+AUTH_JWT_AUDIENCE=
+AUTH_JWT_TENANT_CLAIM=tenant_id
+AUTH_JWT_ROLE_CLAIM=role
+AUTH_JWT_SUBJECT_CLAIM=sub
+AUTH_JWT_DISPLAY_NAME_CLAIM=name
+AUTH_JWT_EMAIL_CLAIM=email
+AUTH_JWT_SIGNING_SECRET=
+AUTH_JWT_PUBLIC_KEY_PEM=
+AUTH_JWKS_URL=
+AUTH_JWKS_CACHE_SECONDS=300
 OTEL_SERVICE_NAME=agent-runway-api-go
 OTEL_RESOURCE_ENVIRONMENT=local
 OTEL_EXPORTER_OTLP_ENDPOINT=
@@ -78,7 +91,7 @@ Set `PLANNING_BACKEND=llm` to call the private Python worker during `POST /runs/
 
 Set `TENANT_PROVIDER_POLICIES_JSON` to override planning/execution provider routes and budgets by durable `tenant_id`. Go records provider usage in `provider_usage_records`, checks monthly and per-run budgets before worker calls, and returns HTTP `402` when a blocking budget is already exhausted.
 
-Auth is disabled by default for local development. Set `AUTH_MODE=bearer` or `AUTH_MODE=api_key` to protect all workflow endpoints. `GET /health` and `GET /ready` stay public for platform probes. Tokens are comma-separated by role:
+Auth is disabled by default for local development. Set `AUTH_MODE=bearer`, `AUTH_MODE=api_key`, or `AUTH_MODE=jwt` to protect all workflow endpoints. `GET /health` and `GET /ready` stay public for platform probes. Static tokens are comma-separated by role:
 
 ```bash
 AUTH_MODE=bearer
@@ -97,6 +110,8 @@ X-API-Key: <token>
 Role inheritance is `admin > operator > viewer`. Viewers can read runs and artifacts. Operators can mutate workflow state. Admins currently inherit every operator and viewer permission.
 
 When auth is enabled, each token resolves to a durable tenant/user principal. The Go API upserts the identity rows, stamps new runs with `tenant_id`, `owner_user_id`, and `created_by_user_id`, filters `GET /runs` to the caller's tenant, and returns `404` for cross-tenant run IDs. Configure `AUTH_TOKEN_PRINCIPALS_JSON` to map deployed tokens to stable tenant/user IDs.
+
+In `AUTH_MODE=jwt`, the API validates `Authorization: Bearer <jwt>` with HS256, RS256 PEM, or RS256 JWKS configuration. JWT claims map to durable subject, tenant, display name, and role fields through the `AUTH_JWT_*_CLAIM` settings.
 
 The API accepts or generates request correlation headers and echoes them on every response:
 
@@ -132,4 +147,4 @@ The current endpoints are:
 - `GET /runs/{run_id}/tool-calls`
 - `GET /runs/{run_id}/llm-calls`
 
-Finalization requires a run in `verifying`, a latest verification verdict of `pass`, and zero pending approvals. The next implementation step is signed JWT validation and worker-side spans for provider calls.
+Finalization requires a run in `verifying`, a latest verification verdict of `pass`, and zero pending approvals. The next implementation step is worker-side spans for provider calls and execution turns.
