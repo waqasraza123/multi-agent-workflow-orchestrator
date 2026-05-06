@@ -5,6 +5,7 @@ This is the first hybrid control-plane slice for Agent Runway.
 Current responsibilities:
 
 - expose Go service health/readiness endpoints
+- enforce opt-in bearer-token RBAC for workflow endpoints
 - own initial run creation and run reads
 - own deterministic plan generation
 - own deterministic and worker-backed LLM turn advancement
@@ -41,11 +42,33 @@ LLM_MAX_RETRIES=0
 LLM_TIMEOUT_SECONDS=
 LLM_TEMPERATURE=
 LLM_MAX_OUTPUT_TOKENS=
+AUTH_MODE=disabled
+AUTH_VIEWER_TOKENS=
+AUTH_OPERATOR_TOKENS=
+AUTH_ADMIN_TOKENS=
 ```
 
 Set `EXECUTION_BACKEND=llm` to call the private Python worker during `POST /runs/{run_id}/turns/advance`. Go still owns the final run state transition and database writes.
 
 If the Python worker is unavailable, the Go control plane falls back to deterministic execution and persists an LLM-call record with the failure details.
+
+Auth is disabled by default for local development. Set `AUTH_MODE=bearer` or `AUTH_MODE=api_key` to protect all workflow endpoints. `GET /health` and `GET /ready` stay public for platform probes. Tokens are comma-separated by role:
+
+```bash
+AUTH_MODE=bearer
+AUTH_VIEWER_TOKENS=view-token-1,view-token-2
+AUTH_OPERATOR_TOKENS=operator-token
+AUTH_ADMIN_TOKENS=admin-token
+```
+
+Clients send either:
+
+```text
+Authorization: Bearer <token>
+X-API-Key: <token>
+```
+
+Role inheritance is `admin > operator > viewer`. Viewers can read runs and artifacts. Operators can mutate workflow state. Admins currently inherit every operator and viewer permission.
 
 The current endpoints are:
 
@@ -70,4 +93,4 @@ The current endpoints are:
 - `GET /runs/{run_id}/tool-calls`
 - `GET /runs/{run_id}/llm-calls`
 
-Finalization requires a run in `verifying`, a latest verification verdict of `pass`, and zero pending approvals. The next implementation step is to add auth/RBAC at the API boundary.
+Finalization requires a run in `verifying`, a latest verification verdict of `pass`, and zero pending approvals. The next implementation step is structured request logging, request IDs, and trace propagation between Go and Python.

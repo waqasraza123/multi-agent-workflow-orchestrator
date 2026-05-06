@@ -33,6 +33,7 @@ Completed areas:
 - Go-owned verification and finalization endpoints
 - Go-owned finalization gate for passing verification and pending approvals
 - Go-owned approval request, listing, and decision endpoints
+- Go-owned opt-in auth/RBAC for workflow endpoints
 - private Python agent-worker scaffold
 - shared worker-boundary contracts
 - unit and integration tests for the implemented platform spine
@@ -58,8 +59,8 @@ This repository is in a strong backend MVP state for:
 
 ## Next practical upgrades
 
-- auth and RBAC
 - observability and tracing
 - richer provider policies
 - LLM-backed planning
+- durable user, tenant, and ownership records
 - frontend operator console

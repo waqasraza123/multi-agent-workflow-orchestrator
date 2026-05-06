@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Settings struct {
@@ -18,6 +19,10 @@ type Settings struct {
 	LLMMaxOutputTokens *int
 	LLMTimeoutSeconds  *float64
 	LLMMaxRetries      int
+	AuthMode           string
+	AuthViewerTokens   []string
+	AuthOperatorTokens []string
+	AuthAdminTokens    []string
 }
 
 func Load() Settings {
@@ -34,11 +39,25 @@ func Load() Settings {
 		LLMMaxOutputTokens: readOptionalInt("LLM_MAX_OUTPUT_TOKENS"),
 		LLMTimeoutSeconds:  readOptionalFloat("LLM_TIMEOUT_SECONDS"),
 		LLMMaxRetries:      readInt("LLM_MAX_RETRIES", 0),
+		AuthMode:           strings.ToLower(readEnv("AUTH_MODE", "disabled")),
+		AuthViewerTokens:   readCSV("AUTH_VIEWER_TOKENS"),
+		AuthOperatorTokens: readCSV("AUTH_OPERATOR_TOKENS"),
+		AuthAdminTokens:    readCSV("AUTH_ADMIN_TOKENS"),
 	}
 }
 
 func (settings Settings) HTTPAddress() string {
 	return settings.Host + ":" + settings.Port
+}
+
+func (settings Settings) AuthEnabled() bool {
+	return settings.AuthMode != "" && settings.AuthMode != "disabled"
+}
+
+func (settings Settings) HasAuthTokens() bool {
+	return len(settings.AuthViewerTokens) > 0 ||
+		len(settings.AuthOperatorTokens) > 0 ||
+		len(settings.AuthAdminTokens) > 0
 }
 
 func readEnv(name string, fallback string) string {
@@ -71,6 +90,22 @@ func readOptionalInt(name string) *int {
 		return nil
 	}
 	return &parsed
+}
+
+func readCSV(name string) []string {
+	value := os.Getenv(name)
+	if value == "" {
+		return []string{}
+	}
+	parts := strings.Split(value, ",")
+	items := make([]string, 0, len(parts))
+	for _, part := range parts {
+		item := strings.TrimSpace(part)
+		if item != "" {
+			items = append(items, item)
+		}
+	}
+	return items
 }
 
 func readOptionalFloat(name string) *float64 {

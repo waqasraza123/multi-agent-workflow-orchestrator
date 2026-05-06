@@ -126,6 +126,8 @@ The Go control plane currently owns:
 
 The remaining workflow endpoints continue to use the Python FastAPI app as the reference implementation until they are ported. In `EXECUTION_BACKEND=llm` mode, Go calls the private Python worker for turn execution and then persists the resulting state, turn, tool-call, evidence, event, and LLM-call records itself. Go also owns approval checkpoints, verifies completed runs, enforces the finalization gate, writes final outputs, and records lifecycle events. If the worker is unavailable, Go falls back to deterministic execution and records the LLM failure for audit.
 
+The Go control plane supports opt-in RBAC with bearer or `X-API-Key` tokens. `GET /health` and `GET /ready` remain public for platform probes; workflow endpoints require viewer, operator, or admin access when `AUTH_MODE` is enabled.
+
 Run the Python worker locally:
 
 ```bash
@@ -219,6 +221,19 @@ LLM_API_KEY=...
 
 `LLM_API_KEY` is required when `LLM_PROVIDER_NAME=openai`.
 
+Go API auth:
+
+```bash
+AUTH_MODE=disabled
+AUTH_MODE=bearer
+AUTH_MODE=api_key
+AUTH_VIEWER_TOKENS=<comma-separated-read-tokens>
+AUTH_OPERATOR_TOKENS=<comma-separated-write-tokens>
+AUTH_ADMIN_TOKENS=<comma-separated-admin-tokens>
+```
+
+Use `AUTH_MODE=bearer` or `AUTH_MODE=api_key` outside local development. Clients can authenticate with `Authorization: Bearer <token>` or `X-API-Key: <token>`.
+
 ## Deploy On Render
 
 Use Render as a Python web service.
@@ -309,7 +324,7 @@ make smoke-llm-fake
 
 Agent Runway is backend-MVP ready for demos, architecture walkthroughs, portfolio presentation, and further hardening.
 
-The next production upgrades are authentication and RBAC, observability, richer provider policies, and a fuller operator console.
+The next production upgrades are observability, richer provider policies, and a fuller operator console.
 
 ## License
 

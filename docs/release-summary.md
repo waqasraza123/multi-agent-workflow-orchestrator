@@ -33,6 +33,7 @@ Agent Runway is a backend-first AI workflow automation system. It turns a busine
 - Go-owned verification and finalization endpoints
 - Go-owned final output persistence
 - Go-owned approval request, listing, and decision endpoints
+- Go-owned opt-in auth/RBAC for workflow endpoints
 - private Python agent-worker scaffold
 - shared worker-boundary contracts
 - FastAPI endpoints for the current execution workflow
@@ -135,7 +136,7 @@ Fake LLM mode:
 
 ## Current limitations
 
-- no auth or RBAC
+- no durable user, tenant, or ownership model yet
 - no frontend operator console
 - no observability stack
 - no distributed worker layer
@@ -143,8 +144,8 @@ Fake LLM mode:
 
 ## Recommended next roadmap
 
-- add authentication and authorization
 - add observability and tracing
+- add durable user, tenant, and ownership records
 - add richer provider policies
 - add LLM-backed planning
 - add frontend operator console

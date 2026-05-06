@@ -31,6 +31,8 @@ The Go service in `apps/api-go` currently owns:
 
 The Python FastAPI app remains the reference for endpoints that are not listed above.
 
+The Go service also owns opt-in API-boundary RBAC for the workflow endpoints. See `docs/go-auth-rbac.md`.
+
 ## State Ownership
 
 Go owns run state mutation for the endpoints it serves. Python must not mutate run state when called as a worker. This keeps state transitions auditable and prevents split-brain behavior between services.
@@ -131,7 +133,7 @@ No Go-native migration system is introduced yet. Alembic remains the migration a
 
 ## Next Implementation Order
 
-1. Add auth/RBAC at the Go API boundary.
-2. Add structured request logging, request IDs, and trace propagation between Go and Python.
-3. Add richer provider policies and LLM-backed planning.
+1. Add structured request logging, request IDs, and trace propagation between Go and Python.
+2. Add richer provider policies and LLM-backed planning.
+3. Replace static auth tokens with durable user, tenant, and ownership records.
 4. Port the remaining manual task/evidence mutation endpoints or intentionally deprecate them behind the Go workflow API.
