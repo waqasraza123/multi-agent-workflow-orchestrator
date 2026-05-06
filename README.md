@@ -124,7 +124,7 @@ The Go control plane currently owns:
 - `GET /health`
 - `GET /ready`
 
-The remaining workflow endpoints continue to use the Python FastAPI app as the reference implementation until they are ported. In `EXECUTION_BACKEND=llm` mode, Go calls the private Python worker for turn execution and then persists the resulting state, turn, tool-call, evidence, event, and LLM-call records itself. Go also owns approval checkpoints, verifies completed runs, enforces the finalization gate, writes final outputs, and records lifecycle events. If the worker is unavailable, Go falls back to deterministic execution and records the LLM failure for audit.
+The remaining workflow endpoints continue to use the Python FastAPI app as the reference implementation until they are ported. In `PLANNING_BACKEND=llm` mode, Go calls the private Python worker for plan generation, validates the returned tasks, and persists the plan itself. In `EXECUTION_BACKEND=llm` mode, Go calls the private Python worker for turn execution and then persists the resulting state, turn, tool-call, evidence, event, and LLM-call records itself. Go also owns approval checkpoints, verifies completed runs, enforces the finalization gate, writes final outputs, and records lifecycle events. If the worker is unavailable, Go can fall back to deterministic planning or execution according to the configured fallback policy.
 
 The Go control plane supports opt-in RBAC with bearer or `X-API-Key` tokens. `GET /health` and `GET /ready` remain public for platform probes; workflow endpoints require viewer, operator, or admin access when `AUTH_MODE` is enabled.
 
@@ -209,6 +209,7 @@ Execution backends:
 ```bash
 EXECUTION_BACKEND=deterministic
 EXECUTION_BACKEND=llm
+EXECUTION_FALLBACK_ENABLED=true
 ```
 
 LLM provider settings:
@@ -222,6 +223,18 @@ LLM_API_KEY=...
 ```
 
 `LLM_API_KEY` is required when `LLM_PROVIDER_NAME=openai`.
+
+Planning backends:
+
+```bash
+PLANNING_BACKEND=deterministic
+PLANNING_BACKEND=llm
+PLANNING_PROVIDER_NAME=fake
+PLANNING_PROVIDER_NAME=openai
+PLANNING_MODEL_NAME=fake-model
+PLANNING_MAX_RETRIES=0
+PLANNING_FALLBACK_ENABLED=true
+```
 
 Go API auth:
 
@@ -326,7 +339,7 @@ make smoke-llm-fake
 
 Agent Runway is backend-MVP ready for demos, architecture walkthroughs, portfolio presentation, and further hardening.
 
-The next production upgrades are richer provider policies, LLM-backed planning, durable user/tenant ownership, and a fuller operator console.
+The next production upgrades are durable user/tenant ownership, OpenTelemetry export, and a fuller operator console.
 
 ## License
 

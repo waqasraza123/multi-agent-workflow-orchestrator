@@ -7,42 +7,60 @@ import (
 )
 
 type Settings struct {
-	Host               string
-	Port               string
-	DatabaseURL        string
-	AgentWorkerURL     string
-	AgentWorkerToken   string
-	ExecutionBackend   string
-	LLMProviderName    string
-	LLMModelName       string
-	LLMTemperature     *float64
-	LLMMaxOutputTokens *int
-	LLMTimeoutSeconds  *float64
-	LLMMaxRetries      int
-	AuthMode           string
-	AuthViewerTokens   []string
-	AuthOperatorTokens []string
-	AuthAdminTokens    []string
+	Host                     string
+	Port                     string
+	DatabaseURL              string
+	AgentWorkerURL           string
+	AgentWorkerToken         string
+	ExecutionBackend         string
+	LLMProviderName          string
+	LLMModelName             string
+	LLMTemperature           *float64
+	LLMMaxOutputTokens       *int
+	LLMTimeoutSeconds        *float64
+	LLMMaxRetries            int
+	ExecutionFallbackEnabled bool
+	PlanningBackend          string
+	PlanningProviderName     string
+	PlanningModelName        string
+	PlanningTemperature      *float64
+	PlanningMaxOutputTokens  *int
+	PlanningTimeoutSeconds   *float64
+	PlanningMaxRetries       int
+	PlanningFallbackEnabled  bool
+	AuthMode                 string
+	AuthViewerTokens         []string
+	AuthOperatorTokens       []string
+	AuthAdminTokens          []string
 }
 
 func Load() Settings {
 	return Settings{
-		Host:               readEnv("HOST", "0.0.0.0"),
-		Port:               readEnv("PORT", "8080"),
-		DatabaseURL:        os.Getenv("DATABASE_URL"),
-		AgentWorkerURL:     readEnv("AGENT_WORKER_URL", "http://127.0.0.1:8090"),
-		AgentWorkerToken:   os.Getenv("AGENT_WORKER_TOKEN"),
-		ExecutionBackend:   readEnv("EXECUTION_BACKEND", "deterministic"),
-		LLMProviderName:    readEnv("LLM_PROVIDER_NAME", "fake"),
-		LLMModelName:       readEnv("LLM_MODEL_NAME", "fake-model"),
-		LLMTemperature:     readOptionalFloat("LLM_TEMPERATURE"),
-		LLMMaxOutputTokens: readOptionalInt("LLM_MAX_OUTPUT_TOKENS"),
-		LLMTimeoutSeconds:  readOptionalFloat("LLM_TIMEOUT_SECONDS"),
-		LLMMaxRetries:      readInt("LLM_MAX_RETRIES", 0),
-		AuthMode:           strings.ToLower(readEnv("AUTH_MODE", "disabled")),
-		AuthViewerTokens:   readCSV("AUTH_VIEWER_TOKENS"),
-		AuthOperatorTokens: readCSV("AUTH_OPERATOR_TOKENS"),
-		AuthAdminTokens:    readCSV("AUTH_ADMIN_TOKENS"),
+		Host:                     readEnv("HOST", "0.0.0.0"),
+		Port:                     readEnv("PORT", "8080"),
+		DatabaseURL:              os.Getenv("DATABASE_URL"),
+		AgentWorkerURL:           readEnv("AGENT_WORKER_URL", "http://127.0.0.1:8090"),
+		AgentWorkerToken:         os.Getenv("AGENT_WORKER_TOKEN"),
+		ExecutionBackend:         strings.ToLower(readEnv("EXECUTION_BACKEND", "deterministic")),
+		LLMProviderName:          readEnv("LLM_PROVIDER_NAME", "fake"),
+		LLMModelName:             readEnv("LLM_MODEL_NAME", "fake-model"),
+		LLMTemperature:           readOptionalFloat("LLM_TEMPERATURE"),
+		LLMMaxOutputTokens:       readOptionalInt("LLM_MAX_OUTPUT_TOKENS"),
+		LLMTimeoutSeconds:        readOptionalFloat("LLM_TIMEOUT_SECONDS"),
+		LLMMaxRetries:            readInt("LLM_MAX_RETRIES", 0),
+		ExecutionFallbackEnabled: readBool("EXECUTION_FALLBACK_ENABLED", true),
+		PlanningBackend:          strings.ToLower(readEnv("PLANNING_BACKEND", "deterministic")),
+		PlanningProviderName:     readEnv("PLANNING_PROVIDER_NAME", readEnv("LLM_PROVIDER_NAME", "fake")),
+		PlanningModelName:        readEnv("PLANNING_MODEL_NAME", readEnv("LLM_MODEL_NAME", "fake-model")),
+		PlanningTemperature:      readOptionalFloat("PLANNING_TEMPERATURE"),
+		PlanningMaxOutputTokens:  readOptionalInt("PLANNING_MAX_OUTPUT_TOKENS"),
+		PlanningTimeoutSeconds:   readOptionalFloat("PLANNING_TIMEOUT_SECONDS"),
+		PlanningMaxRetries:       readInt("PLANNING_MAX_RETRIES", readInt("LLM_MAX_RETRIES", 0)),
+		PlanningFallbackEnabled:  readBool("PLANNING_FALLBACK_ENABLED", true),
+		AuthMode:                 strings.ToLower(readEnv("AUTH_MODE", "disabled")),
+		AuthViewerTokens:         readCSV("AUTH_VIEWER_TOKENS"),
+		AuthOperatorTokens:       readCSV("AUTH_OPERATOR_TOKENS"),
+		AuthAdminTokens:          readCSV("AUTH_ADMIN_TOKENS"),
 	}
 }
 
@@ -78,6 +96,21 @@ func readInt(name string, fallback int) int {
 		return fallback
 	}
 	return parsed
+}
+
+func readBool(name string, fallback bool) bool {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv(name)))
+	if value == "" {
+		return fallback
+	}
+	switch value {
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return fallback
+	}
 }
 
 func readOptionalInt(name string) *int {

@@ -42,13 +42,15 @@ The Go control plane currently implements the initial run surface:
 The Go control plane calls the Python agent worker through:
 
 ```text
+POST /internal/agent/plan
 POST /internal/agent/turn
 ```
 
-The request and response schema is defined in:
+The request and response schemas are defined in:
 
 ```text
+packages/contracts/worker/agent-plan.schema.json
 packages/contracts/worker/agent-turn.schema.json
 ```
 
-Only the Go control plane should call this endpoint. The Python worker returns structured execution output; it does not mutate run state.
+Only the Go control plane should call these endpoints. The Python worker returns structured planning or execution output; it does not mutate run state.

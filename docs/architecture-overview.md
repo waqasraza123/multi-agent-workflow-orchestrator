@@ -14,7 +14,7 @@ The next backend architecture is a hybrid Go and Python deployment.
 - Python is the private agent worker for LLM/provider execution.
 - Go calls Python through `POST /internal/agent/turn`.
 - Python returns structured execution outcomes and does not mutate run state directly.
-- The Go control plane owns initial run creation, run reads, deterministic planning, deterministic turn advancement, worker-backed LLM turn advancement, approvals, verification, and finalization.
+- The Go control plane owns initial run creation, run reads, deterministic planning, worker-backed LLM planning, deterministic turn advancement, worker-backed LLM turn advancement, approvals, verification, and finalization.
 - The Go control plane exposes persisted workflow artifact reads for events, turns, tool calls, LLM calls, approvals, verifications, and final outputs.
 - The Go control plane enforces opt-in bearer-token RBAC for workflow endpoints.
 - The Go control plane emits structured request logs and propagates request IDs plus W3C trace context to the Python worker.
@@ -35,7 +35,7 @@ Contracts define stable request, response, and domain models used across the pla
 State transition functions own run-state mutation rules for tasks and evidence.
 
 ### Planning layer
-Planning generates deterministic task sequences from the run goal and workflow type.
+Planning generates deterministic task sequences from the run goal and workflow type, or delegates provider-backed planning to the private Python worker while keeping task registration and persistence in Go.
 
 ### Agent execution layer
 Execution supports two backends:

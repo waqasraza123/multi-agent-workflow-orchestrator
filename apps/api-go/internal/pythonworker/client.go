@@ -86,6 +86,46 @@ func (client *Client) ExecuteTurn(
 	return outcome, nil
 }
 
+func (client *Client) GeneratePlan(
+	ctx context.Context,
+	planRequest contracts.LLMWorkerPlanRequest,
+) (contracts.LLMPlanningOutcome, error) {
+	var outcome contracts.LLMPlanningOutcome
+	body, err := json.Marshal(planRequest)
+	if err != nil {
+		return outcome, err
+	}
+
+	request, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		client.baseURL+"/internal/agent/plan",
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		return outcome, err
+	}
+	request.Header.Set("Content-Type", "application/json")
+	if client.token != "" {
+		request.Header.Set("Authorization", "Bearer "+client.token)
+	}
+	attachRequestMetadata(ctx, request)
+
+	response, err := client.httpClient.Do(request)
+	if err != nil {
+		return outcome, err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return outcome, fmt.Errorf("agent worker planning returned status %d", response.StatusCode)
+	}
+	if err := json.NewDecoder(response.Body).Decode(&outcome); err != nil {
+		return outcome, err
+	}
+	return outcome, nil
+}
+
 func attachRequestMetadata(ctx context.Context, request *http.Request) {
 	metadata, ok := requestmeta.FromContext(ctx)
 	if !ok {

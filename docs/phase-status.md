@@ -27,7 +27,8 @@ Completed areas:
 - OpenAI-compatible provider support
 - hybrid Go control-plane scaffold
 - Go-owned run create/list/read endpoints
-- Go-owned deterministic planning and turn advancement
+- Go-owned deterministic and worker-backed LLM planning
+- Go-owned deterministic turn advancement
 - Go-owned worker-backed LLM turn advancement
 - Go-owned artifact list endpoints for events, turns, tool calls, and LLM calls
 - Go-owned verification and finalization endpoints
@@ -60,8 +61,7 @@ This repository is in a strong backend MVP state for:
 
 ## Next practical upgrades
 
-- richer provider policies
-- LLM-backed planning
 - durable user, tenant, and ownership records
 - OpenTelemetry span export
+- richer provider routing, budgets, and tenant-specific model policy
 - frontend operator console

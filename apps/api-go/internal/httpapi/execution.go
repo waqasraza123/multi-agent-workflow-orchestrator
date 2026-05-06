@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/contracts"
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/domain"
@@ -61,7 +62,16 @@ func (handler Handler) executeTurn(
 
 	workerOutcome, err := handler.dependencies.WorkerClient.ExecuteTurn(ctx, workerRequest)
 	if err != nil {
+		if !handler.dependencies.Settings.ExecutionFallbackEnabled {
+			return turnExecutionOutcome{}, err
+		}
 		return handler.buildWorkerFallbackOutcome(runState, task, turnID, err.Error())
+	}
+	if workerOutcome.FallbackUsed && !handler.dependencies.Settings.ExecutionFallbackEnabled {
+		if workerOutcome.ErrorMessage != nil {
+			return turnExecutionOutcome{}, fmt.Errorf("%s", *workerOutcome.ErrorMessage)
+		}
+		return turnExecutionOutcome{}, fmt.Errorf("LLM execution returned fallback output")
 	}
 
 	turnResult := domain.TurnExecutionResult{

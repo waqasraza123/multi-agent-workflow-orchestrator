@@ -41,6 +41,15 @@ func BuildRunPlan(runState RunStateSnapshot) (RunPlanReport, error) {
 	}
 }
 
+func NewRunPlanFromPlannedTasks(
+	runState RunStateSnapshot,
+	templateName string,
+	summary string,
+	tasks []PlannedTask,
+) (RunPlanReport, error) {
+	return newRunPlan(runState, templateName, summary, tasks)
+}
+
 func RegisterTasks(runState RunStateSnapshot, plannedTasks []PlannedTask) (RunStateSnapshot, error) {
 	if len(plannedTasks) == 0 {
 		return RunStateSnapshot{}, fmt.Errorf("at least one task is required")

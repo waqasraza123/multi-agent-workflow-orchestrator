@@ -117,11 +117,14 @@ Tool outputs are deterministic strings derived from the active task title. Evide
 The private Python worker lives in `services/agent_worker` and exposes:
 
 - `GET /health`
+- `POST /internal/agent/plan`
 - `POST /internal/agent/turn`
 
-The worker returns structured turn outcomes and does not write to the database.
+The worker returns structured planning or turn outcomes and does not write to the database.
 
 Go selects worker-backed LLM execution when `EXECUTION_BACKEND=llm`. The Python worker returns a structured turn outcome. Go still owns the final run state update, event append, turn record, tool-call records, LLM-call record, and fallback persistence.
+
+Go selects worker-backed LLM planning when `PLANNING_BACKEND=llm`. The Python worker returns a structured plan. Go still validates tasks, persists the plan, registers tasks, and appends planning events.
 
 If the Python worker is unreachable or returns a transport-level error, Go falls back to deterministic turn execution and still persists an LLM-call record with `fallback_used=true` and the error message. This keeps the run advancing while preserving the failed LLM execution attempt for audit.
 
@@ -137,7 +140,7 @@ No Go-native migration system is introduced yet. Alembic remains the migration a
 
 ## Next Implementation Order
 
-1. Add richer provider policies and LLM-backed planning.
-2. Replace static auth tokens with durable user, tenant, and ownership records.
-3. Add OpenTelemetry span export and persist request IDs on durable run events.
+1. Replace static auth tokens with durable user, tenant, and ownership records.
+2. Add OpenTelemetry span export and persist request IDs on durable run events.
+3. Add richer provider routing, budgets, and tenant-specific model policy.
 4. Port the remaining manual task/evidence mutation endpoints or intentionally deprecate them behind the Go workflow API.

@@ -55,6 +55,13 @@ type LLMWorkerTurnRequest struct {
 	AvailableToolNames []string              `json:"available_tool_names"`
 }
 
+type LLMWorkerPlanRequest struct {
+	RunID            string                `json:"run_id"`
+	UserGoal         string                `json:"user_goal"`
+	WorkflowType     string                `json:"workflow_type"`
+	ExecutionProfile AgentExecutionProfile `json:"execution_profile"`
+}
+
 type LLMTurnResponse struct {
 	ProviderName    string               `json:"provider_name"`
 	ModelName       string               `json:"model_name"`
@@ -71,4 +78,39 @@ type LLMExecutionOutcome struct {
 	ErrorMessage  *string              `json:"error_message,omitempty"`
 	FallbackUsed  bool                 `json:"fallback_used"`
 	AttemptCount  int                  `json:"attempt_count"`
+}
+
+type PlannedTask struct {
+	TaskID             string   `json:"task_id"`
+	Title              string   `json:"title"`
+	Description        string   `json:"description"`
+	AssignedAgent      string   `json:"assigned_agent"`
+	DependencyIDs      []string `json:"dependency_ids"`
+	AcceptanceCriteria []string `json:"acceptance_criteria"`
+}
+
+type LLMPlanReport struct {
+	RunID        string        `json:"run_id"`
+	WorkflowType string        `json:"workflow_type"`
+	TemplateName string        `json:"template_name"`
+	Summary      string        `json:"summary"`
+	Tasks        []PlannedTask `json:"tasks"`
+}
+
+type LLMPlanResponse struct {
+	ProviderName    string        `json:"provider_name"`
+	ModelName       string        `json:"model_name"`
+	Output          LLMPlanReport `json:"output"`
+	Usage           LLMUsage      `json:"usage"`
+	FinishReason    *string       `json:"finish_reason,omitempty"`
+	LatencyMS       *int          `json:"latency_ms,omitempty"`
+	RawResponseText *string       `json:"raw_response_text,omitempty"`
+}
+
+type LLMPlanningOutcome struct {
+	Output       LLMPlanReport    `json:"output"`
+	LLMResponse  *LLMPlanResponse `json:"llm_response,omitempty"`
+	ErrorMessage *string          `json:"error_message,omitempty"`
+	FallbackUsed bool             `json:"fallback_used"`
+	AttemptCount int              `json:"attempt_count"`
 }

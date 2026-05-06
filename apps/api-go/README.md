@@ -43,6 +43,15 @@ LLM_MAX_RETRIES=0
 LLM_TIMEOUT_SECONDS=
 LLM_TEMPERATURE=
 LLM_MAX_OUTPUT_TOKENS=
+EXECUTION_FALLBACK_ENABLED=true
+PLANNING_BACKEND=deterministic
+PLANNING_PROVIDER_NAME=fake
+PLANNING_MODEL_NAME=fake-model
+PLANNING_MAX_RETRIES=0
+PLANNING_TIMEOUT_SECONDS=
+PLANNING_TEMPERATURE=
+PLANNING_MAX_OUTPUT_TOKENS=
+PLANNING_FALLBACK_ENABLED=true
 AUTH_MODE=disabled
 AUTH_VIEWER_TOKENS=
 AUTH_OPERATOR_TOKENS=
@@ -52,6 +61,8 @@ AUTH_ADMIN_TOKENS=
 Set `EXECUTION_BACKEND=llm` to call the private Python worker during `POST /runs/{run_id}/turns/advance`. Go still owns the final run state transition and database writes.
 
 If the Python worker is unavailable, the Go control plane falls back to deterministic execution and persists an LLM-call record with the failure details.
+
+Set `PLANNING_BACKEND=llm` to call the private Python worker during `POST /runs/{run_id}/plan`. Go still validates worker-generated tasks, persists the plan, updates run state, and writes lifecycle events. `PLANNING_FALLBACK_ENABLED=true` stores the deterministic template plan when provider planning fails. Set it to `false` to fail planning before tasks are registered.
 
 Auth is disabled by default for local development. Set `AUTH_MODE=bearer` or `AUTH_MODE=api_key` to protect all workflow endpoints. `GET /health` and `GET /ready` stay public for platform probes. Tokens are comma-separated by role:
 
@@ -103,4 +114,4 @@ The current endpoints are:
 - `GET /runs/{run_id}/tool-calls`
 - `GET /runs/{run_id}/llm-calls`
 
-Finalization requires a run in `verifying`, a latest verification verdict of `pass`, and zero pending approvals. The next implementation step is richer provider policies and LLM-backed planning.
+Finalization requires a run in `verifying`, a latest verification verdict of `pass`, and zero pending approvals. The next implementation step is durable user, tenant, and ownership records.

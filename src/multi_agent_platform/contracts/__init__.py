@@ -72,6 +72,12 @@ from multi_agent_platform.contracts.runs import (
     TaskStatus,
     WorkflowType,
 )
+from multi_agent_platform.contracts.turn_execution import (
+    LlmPlanOutput,
+    LlmPlanRequest,
+    LlmPlanResponse,
+    LlmPlanningOutcome,
+)
 
 __all__ = [
     "ApprovalDecision",
@@ -121,6 +127,10 @@ __all__ = [
     "RunTurnResponse",
     "RunVerificationReport",
     "RunVerificationResponse",
+    "LlmPlanOutput",
+    "LlmPlanRequest",
+    "LlmPlanResponse",
+    "LlmPlanningOutcome",
     "TaskCompleteRequest",
     "TaskRecord",
     "TaskRegistrationRequest",

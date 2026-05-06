@@ -1,9 +1,12 @@
 package httpapi
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/waqasraza123/agent-runway/apps/api-go/internal/contracts"
 	"github.com/waqasraza123/agent-runway/apps/api-go/internal/domain"
 )
 
@@ -21,7 +24,7 @@ func (handler Handler) GeneratePlan(response http.ResponseWriter, request *http.
 		return
 	}
 
-	plan, err := domain.BuildRunPlan(runState)
+	plan, err := handler.buildRunPlan(request.Context(), runState)
 	if err != nil {
 		handler.logError("build plan failed", err)
 		writeError(response, http.StatusInternalServerError, "Failed to build run plan")
@@ -41,8 +44,9 @@ func (handler Handler) GeneratePlan(response http.ResponseWriter, request *http.
 		runState.RunID,
 		domain.RunEventTypePlanGenerated,
 		map[string]any{
-			"plan_id":       plan.PlanID,
-			"template_name": plan.TemplateName,
+			"plan_id":          plan.PlanID,
+			"template_name":    plan.TemplateName,
+			"planning_backend": handler.dependencies.Settings.PlanningBackend,
 		},
 	)
 	if err != nil {
@@ -74,6 +78,74 @@ func (handler Handler) GeneratePlan(response http.ResponseWriter, request *http.
 	}
 
 	writeJSON(response, http.StatusOK, domain.RunPlanResponse{Item: storedPlan})
+}
+
+func (handler Handler) buildRunPlan(
+	ctx context.Context,
+	runState domain.RunStateSnapshot,
+) (domain.RunPlanReport, error) {
+	if handler.dependencies.Settings.PlanningBackend != "llm" {
+		return domain.BuildRunPlan(runState)
+	}
+	if handler.dependencies.WorkerClient == nil {
+		if handler.dependencies.Settings.PlanningFallbackEnabled {
+			return domain.BuildRunPlan(runState)
+		}
+		return domain.RunPlanReport{}, fmt.Errorf("planning backend is llm but worker client is not configured")
+	}
+
+	workerOutcome, err := handler.dependencies.WorkerClient.GeneratePlan(
+		ctx,
+		contracts.LLMWorkerPlanRequest{
+			RunID:        runState.RunID,
+			UserGoal:     runState.UserGoal,
+			WorkflowType: string(runState.WorkflowType),
+			ExecutionProfile: contracts.AgentExecutionProfile{
+				AgentName:       "planner",
+				Backend:         contracts.ExecutionBackendLLM,
+				LLMProviderName: &handler.dependencies.Settings.PlanningProviderName,
+				ModelName:       &handler.dependencies.Settings.PlanningModelName,
+				Temperature:     handler.dependencies.Settings.PlanningTemperature,
+				MaxOutputTokens: handler.dependencies.Settings.PlanningMaxOutputTokens,
+				TimeoutSeconds:  handler.dependencies.Settings.PlanningTimeoutSeconds,
+				MaxRetries:      handler.dependencies.Settings.PlanningMaxRetries,
+			},
+		},
+	)
+	if err != nil {
+		if handler.dependencies.Settings.PlanningFallbackEnabled {
+			return domain.BuildRunPlan(runState)
+		}
+		return domain.RunPlanReport{}, err
+	}
+	if workerOutcome.FallbackUsed && !handler.dependencies.Settings.PlanningFallbackEnabled {
+		if workerOutcome.ErrorMessage != nil {
+			return domain.RunPlanReport{}, fmt.Errorf("%s", *workerOutcome.ErrorMessage)
+		}
+		return domain.RunPlanReport{}, fmt.Errorf("LLM planning returned fallback output")
+	}
+
+	return domain.NewRunPlanFromPlannedTasks(
+		runState,
+		workerOutcome.Output.TemplateName,
+		workerOutcome.Output.Summary,
+		mapWorkerPlannedTasks(workerOutcome.Output.Tasks),
+	)
+}
+
+func mapWorkerPlannedTasks(items []contracts.PlannedTask) []domain.PlannedTask {
+	mapped := make([]domain.PlannedTask, 0, len(items))
+	for _, item := range items {
+		mapped = append(mapped, domain.PlannedTask{
+			TaskID:             item.TaskID,
+			Title:              item.Title,
+			Description:        item.Description,
+			AssignedAgent:      item.AssignedAgent,
+			DependencyIDs:      item.DependencyIDs,
+			AcceptanceCriteria: item.AcceptanceCriteria,
+		})
+	}
+	return mapped
 }
 
 func (handler Handler) GetLatestPlan(response http.ResponseWriter, request *http.Request) {

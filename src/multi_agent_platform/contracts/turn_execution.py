@@ -2,6 +2,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from multi_agent_platform.contracts.run_plans import PlannedTask
 from multi_agent_platform.contracts.runs import TaskRecord
 from multi_agent_platform.tools.registry import PlannedToolCall
 
@@ -76,6 +77,15 @@ class LlmTurnRequest(BaseModel):
     available_tool_names: list[str] = Field(default_factory=list)
 
 
+class LlmPlanRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str
+    user_goal: str
+    workflow_type: str
+    execution_profile: AgentExecutionProfile
+
+
 class LlmTurnResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -93,6 +103,38 @@ class LlmExecutionOutcome(BaseModel):
 
     output: StructuredTurnOutput
     llm_response: LlmTurnResponse | None = None
+    error_message: str | None = None
+    fallback_used: bool = False
+    attempt_count: int = Field(default=1, ge=1)
+
+
+class LlmPlanOutput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str
+    workflow_type: str
+    template_name: str
+    summary: str
+    tasks: list[PlannedTask]
+
+
+class LlmPlanResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider_name: str
+    model_name: str
+    output: LlmPlanOutput
+    usage: LlmUsage = Field(default_factory=LlmUsage)
+    finish_reason: str | None = None
+    latency_ms: int | None = Field(default=None, ge=0)
+    raw_response_text: str | None = None
+
+
+class LlmPlanningOutcome(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    output: LlmPlanOutput
+    llm_response: LlmPlanResponse | None = None
     error_message: str | None = None
     fallback_used: bool = False
     attempt_count: int = Field(default=1, ge=1)

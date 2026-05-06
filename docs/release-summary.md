@@ -27,7 +27,8 @@ Agent Runway is a backend-first AI workflow automation system. It turns a busine
 - PostgreSQL-ready database URL support
 - hybrid Go control-plane scaffold
 - Go-owned run create/list/read endpoints
-- Go-owned deterministic planning and turn advancement
+- Go-owned deterministic and worker-backed LLM planning
+- Go-owned deterministic turn advancement
 - Go-owned worker-backed LLM turn advancement
 - Go-owned artifact list endpoints for events, turns, tool calls, and LLM calls
 - Go-owned verification and finalization endpoints
@@ -141,14 +142,13 @@ Fake LLM mode:
 - no frontend operator console
 - no OpenTelemetry collector/exporter yet
 - no distributed worker layer
-- provider coverage is still intentionally narrow
+- provider routing, budget controls, and tenant-specific model policy are not implemented yet
 
 ## Recommended next roadmap
 
 - add durable user, tenant, and ownership records
-- add richer provider policies
-- add LLM-backed planning
 - add OpenTelemetry span export
+- add provider routing, budgets, and tenant-specific model policy
 - add frontend operator console
 
 ## Release note
