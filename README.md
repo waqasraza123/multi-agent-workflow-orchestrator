@@ -99,6 +99,17 @@ Agent Runway is moving toward a hybrid backend:
 
 In this model, Go owns the public API, database access, orchestration, and run state transitions. Python owns LLM/provider execution and returns structured turn outcomes over a private internal HTTP API.
 
+The Go control plane currently owns:
+
+- `POST /runs`
+- `GET /runs`
+- `GET /runs/{run_id}`
+- `GET /runs/{run_id}/state`
+- `GET /health`
+- `GET /ready`
+
+The remaining workflow endpoints continue to use the Python FastAPI app as the reference implementation until they are ported.
+
 Run the Python worker locally:
 
 ```bash

@@ -14,7 +14,8 @@ The next backend architecture is a hybrid Go and Python deployment.
 - Python is the private agent worker for LLM/provider execution.
 - Go calls Python through `POST /internal/agent/turn`.
 - Python returns structured execution outcomes and does not mutate run state directly.
-- The current Python FastAPI app remains the reference implementation while the Go API reaches parity.
+- The Go control plane owns initial run creation and read endpoints.
+- The current Python FastAPI app remains the reference implementation for planning, turn advancement, verification, approvals, and finalization while the Go API reaches parity.
 
 ### API layer
 FastAPI routes expose the workflow and translate application errors into HTTP responses.

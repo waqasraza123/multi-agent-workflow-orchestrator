@@ -16,6 +16,13 @@ The generated document is written to:
 packages/contracts/public/openapi.json
 ```
 
+The Go control plane currently implements the initial run surface:
+
+- `POST /runs`
+- `GET /runs`
+- `GET /runs/{run_id}`
+- `GET /runs/{run_id}/state`
+
 ## Worker Boundary
 
 The Go control plane calls the Python agent worker through:

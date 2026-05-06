@@ -5,7 +5,9 @@ This is the first hybrid control-plane slice for Agent Runway.
 Current responsibilities:
 
 - expose Go service health/readiness endpoints
+- own initial run creation and run reads
 - connect to PostgreSQL through `pgx`
+- write run creation events
 - call the private Python agent worker over HTTP
 - hold Go structs for the worker-boundary contract
 - provide sqlc query scaffolding for the existing run-state table
@@ -31,5 +33,9 @@ The current endpoints are:
 
 - `GET /health`
 - `GET /ready`
+- `POST /runs`
+- `GET /runs`
+- `GET /runs/{run_id}`
+- `GET /runs/{run_id}/state`
 
-The next implementation step is to port the Python run API endpoints into this service while keeping the Python app as the behavior reference.
+The next implementation step is to port planning and turn advancement into this service while keeping the Python app as the behavior reference.

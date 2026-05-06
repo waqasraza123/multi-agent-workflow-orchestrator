@@ -26,6 +26,7 @@ Completed areas:
 - fake provider support
 - OpenAI-compatible provider support
 - hybrid Go control-plane scaffold
+- Go-owned run create/list/read endpoints
 - private Python agent-worker scaffold
 - shared worker-boundary contracts
 - unit and integration tests for the implemented platform spine
@@ -52,7 +53,7 @@ This repository is in a strong backend MVP state for:
 ## Next practical upgrades
 
 - auth and RBAC
-- Go API endpoint parity with the Python reference API
+- Go planning and turn-advancement parity with the Python reference API
 - observability and tracing
 - richer provider policies
 - LLM-backed planning

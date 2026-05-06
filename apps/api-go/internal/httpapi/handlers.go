@@ -45,3 +45,13 @@ func writeJSON(response http.ResponseWriter, statusCode int, payload any) {
 	response.WriteHeader(statusCode)
 	_ = json.NewEncoder(response).Encode(payload)
 }
+
+func writeError(response http.ResponseWriter, statusCode int, detail string) {
+	writeJSON(response, statusCode, map[string]string{"detail": detail})
+}
+
+func (handler Handler) logError(message string, err error) {
+	if handler.dependencies.Logger != nil {
+		handler.dependencies.Logger.Error(message, "error", err)
+	}
+}

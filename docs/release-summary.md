@@ -26,6 +26,7 @@ Agent Runway is a backend-first AI workflow automation system. It turns a busine
 - Alembic schema migrations
 - PostgreSQL-ready database URL support
 - hybrid Go control-plane scaffold
+- Go-owned run create/list/read endpoints
 - private Python agent-worker scaffold
 - shared worker-boundary contracts
 - FastAPI endpoints for the current execution workflow
@@ -137,7 +138,7 @@ Fake LLM mode:
 ## Recommended next roadmap
 
 - add richer provider policies
-- complete Go API parity with the Python reference API
+- port planning and turn advancement into the Go control plane
 - add LLM-backed planning
 - add authentication and authorization
 - add observability and tracing
